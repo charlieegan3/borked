@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 // PageResult a structure for storing a loaded page
@@ -28,7 +29,7 @@ func LoadPage(url url.URL, host string) (PageResult, error) {
 	defer resp.Body.Close()
 
 	var body string
-	if url.Host == host && contentType == "text/html" {
+	if url.Host == host && strings.Contains(contentType, "html") {
 		rawBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return pr, err
