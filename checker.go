@@ -15,7 +15,7 @@ func Scan(url url.URL) {
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go checkURL(url, url, &visited, &wg, &cc)
+	go checkURL(url, url, url, &visited, &wg, &cc)
 	wg.Wait()
 }
 
@@ -68,7 +68,7 @@ func (v *visitedList) Contains(url url.URL) bool {
 	return false
 }
 
-func checkURL(url url.URL, root url.URL, visited *visitedList, wg *sync.WaitGroup, cc *connectionCounter) {
+func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList, wg *sync.WaitGroup, cc *connectionCounter) {
 	defer wg.Done()
 
 	if visited.Contains(url) {
@@ -96,7 +96,7 @@ func checkURL(url url.URL, root url.URL, visited *visitedList, wg *sync.WaitGrou
 		return
 	}
 
-	fmt.Println(strconv.Itoa(pageResult.StatusCode) + " - " + url.String())
+	fmt.Println(source.String() + "\n  " + strconv.Itoa(pageResult.StatusCode) + " - " + url.String())
 
 	if url.Host != root.Host {
 		return
@@ -105,6 +105,6 @@ func checkURL(url url.URL, root url.URL, visited *visitedList, wg *sync.WaitGrou
 	links := ExtractLinks(pageResult.Body, url)
 	for _, l := range links {
 		wg.Add(1)
-		go checkURL(l, root, visited, wg, cc)
+		go checkURL(l, url, root, visited, wg, cc)
 	}
 }
