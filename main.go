@@ -65,10 +65,10 @@ func checkURL(url url.URL, root url.URL, visited *visitedList, wg *sync.WaitGrou
 	}
 
 	for {
-		if cc.Count() < 100 {
+		if cc.Count() < 500 {
 			break
 		}
-		time.Sleep(1000 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	cc.Inc()
