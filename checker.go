@@ -9,13 +9,13 @@ import (
 )
 
 // Scan for broken links starting from a given page
-func Scan(url url.URL) {
+func Scan(url url.URL, showSuccessful bool) {
 	var visited visitedList
 	var cc connectionCounter
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go checkURL(url, url, url, &visited, &wg, &cc)
+	go checkURL(url, url, url, &visited, &wg, &cc, showSuccessful)
 	wg.Wait()
 }
 
@@ -68,7 +68,7 @@ func (v *visitedList) Contains(url url.URL) bool {
 	return false
 }
 
-func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList, wg *sync.WaitGroup, cc *connectionCounter) {
+func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList, wg *sync.WaitGroup, cc *connectionCounter, showSuccessful bool) {
 	defer wg.Done()
 
 	if visited.Contains(url) {
@@ -92,11 +92,13 @@ func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList, w
 	visited.Append(url)
 
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println(source.String() + "\n  " + err.Error())
 		return
 	}
 
-	fmt.Println(source.String() + "\n  " + strconv.Itoa(pageResult.StatusCode) + " - " + url.String())
+	if showSuccessful == true || pageResult.StatusCode != 200 {
+		fmt.Println(source.String() + "\n  " + strconv.Itoa(pageResult.StatusCode) + " - " + url.String())
+	}
 
 	if url.Host != root.Host {
 		return
@@ -105,6 +107,6 @@ func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList, w
 	links := ExtractLinks(pageResult.Body, url)
 	for _, l := range links {
 		wg.Add(1)
-		go checkURL(l, url, root, visited, wg, cc)
+		go checkURL(l, url, root, visited, wg, cc, showSuccessful)
 	}
 }

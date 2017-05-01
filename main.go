@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	if len(os.Args) != 2 {
+	if len(os.Args) < 2 {
 		fmt.Println("Please provide a starting page as an argument")
 		return
 	}
@@ -18,5 +18,10 @@ func main() {
 		return
 	}
 
-	Scan(*start)
+	showSuccessful := false
+	if len(os.Args) == 3 && os.Args[2] == "-a" {
+		showSuccessful = true
+	}
+
+	Scan(*start, showSuccessful)
 }
