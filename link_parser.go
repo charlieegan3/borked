@@ -35,8 +35,14 @@ func ExtractLinks(html string, currentURL url.URL) []url.URL {
 			continue
 		}
 
+		if len(url.Fragment) > 0 && url.String()[0] == '#' {
+			continue
+		}
+
+		url.Fragment = ""
+
 		if url.Host == "" && len(url.Path) > 0 && url.Path[0] != '/' {
-			if currentURL.Path[len(currentURL.Path)-1] != '/' {
+			if currentURL.Path == "" || currentURL.Path[len(currentURL.Path)-1] != '/' {
 				url.Path = "/" + url.Path
 			}
 			url.Path = currentURL.Path + url.Path

@@ -14,7 +14,7 @@ type PageResult struct {
 
 // LoadPage requests the document at the provided URL
 // returns status code (and body if HTML)
-func LoadPage(url url.URL) (PageResult, error) {
+func LoadPage(url url.URL, host string) (PageResult, error) {
 	var pr PageResult
 
 	resp, err := http.Get(url.String())
@@ -28,7 +28,7 @@ func LoadPage(url url.URL) (PageResult, error) {
 	defer resp.Body.Close()
 
 	var body string
-	if contentType == "text/html" {
+	if url.Host == host && contentType == "text/html" {
 		rawBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			return pr, err
