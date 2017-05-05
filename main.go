@@ -23,5 +23,7 @@ func main() {
 		showSuccessful = true
 	}
 
-	Scan(*start, showSuccessful)
+	list := Scan(*start, showSuccessful)
+
+	fmt.Printf("Scanned %d links.", len(list))
 }

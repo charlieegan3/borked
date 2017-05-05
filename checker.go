@@ -9,7 +9,7 @@ import (
 )
 
 // Scan for broken links starting from a given page
-func Scan(url url.URL, showSuccessful bool) {
+func Scan(url url.URL, showSuccessful bool) []url.URL {
 	var visited visitedList
 	var cc connectionCounter
 	var wg sync.WaitGroup
@@ -17,6 +17,8 @@ func Scan(url url.URL, showSuccessful bool) {
 	wg.Add(1)
 	go checkURL(url, url, url, &visited, &wg, &cc, showSuccessful)
 	wg.Wait()
+
+	return visited.URLs
 }
 
 type connectionCounter struct {
@@ -43,20 +45,20 @@ func (c *connectionCounter) Count() int {
 }
 
 type visitedList struct {
-	list []url.URL
+	URLs []url.URL
 	mux  sync.Mutex
 }
 
 func (v *visitedList) Append(link url.URL) {
 	v.mux.Lock()
-	v.list = append(v.list, link)
+	v.URLs = append(v.URLs, link)
 	v.mux.Unlock()
 }
 
 func (v *visitedList) List() []url.URL {
 	v.mux.Lock()
 	defer v.mux.Unlock()
-	return v.list
+	return v.URLs
 }
 
 func (v *visitedList) Contains(url url.URL) bool {
@@ -68,7 +70,9 @@ func (v *visitedList) Contains(url url.URL) bool {
 	return false
 }
 
-func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList, wg *sync.WaitGroup, cc *connectionCounter, showSuccessful bool) {
+func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList,
+	wg *sync.WaitGroup, cc *connectionCounter, showSuccessful bool) {
+
 	defer wg.Done()
 
 	if visited.Contains(url) {
