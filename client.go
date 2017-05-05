@@ -18,7 +18,16 @@ type PageResult struct {
 func LoadPage(url url.URL, host string) (PageResult, error) {
 	var pr PageResult
 
-	resp, err := http.Get(url.String())
+	req, err := http.NewRequest("GET", url.String(), nil)
+
+	if err != nil {
+		return pr, err
+	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0")
+
+	var client http.Client
+	resp, err := client.Do(req)
 
 	if err != nil {
 		return pr, err
