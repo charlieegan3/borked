@@ -2,28 +2,27 @@ package main
 
 import (
 	"fmt"
-	"net/url"
-	"os"
+	"net/http"
+
+	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net"
+	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net/apigatewayproxy"
 )
 
-func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Please provide a starting page as an argument")
-		return
-	}
+// Handle is the exported handler called by AWS Lambda.
+var Handle apigatewayproxy.Handler
 
-	start, err := url.Parse(os.Args[1])
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+func init() {
+	ln := net.Listen()
 
-	showSuccessful := false
-	if len(os.Args) == 3 && os.Args[2] == "-a" {
-		showSuccessful = true
-	}
+	// Amazon API Gateway binary media types are supported out of the box.
+	// If you don't send or receive binary data, you can safely set it to nil.
+	Handle = apigatewayproxy.New(ln, nil).Handle
 
-	list := Scan(*start, showSuccessful)
+	// Any Go framework complying with the Go http.Handler interface can be used.
+	// This includes, but is not limited to, Vanilla Go, Gin, Echo, Gorrila, Goa, etc.
+	go http.Serve(ln, http.HandlerFunc(handle))
+}
 
-	fmt.Printf("Scanned %d links.", len(list))
+func handle(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte(fmt.Sprintf("%v", r)))
 }
