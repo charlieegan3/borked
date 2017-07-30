@@ -1,24 +1,38 @@
 package main
 
 import (
-	"fmt"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
 )
 
+// URLResult represents a checked page and the result of making that check
+type URLResult struct {
+	URL        url.URL
+	StatusCode int
+	Message    string
+}
+
+// ByURL can be used to sort a list by the string URL value
+// used in tests to get a consistent order of URL results
+type ByURL []URLResult
+
+func (a ByURL) Len() int           { return len(a) }
+func (a ByURL) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a ByURL) Less(i, j int) bool { return a[i].URL.String() < a[j].URL.String() }
+
 // Scan for broken links starting from a given page
-func Scan(url url.URL, showSuccessful bool) []url.URL {
-	var visited visitedList
+func Scan(url url.URL) []URLResult {
+	var result scannedURLs
+
 	var cc connectionCounter
 	var wg sync.WaitGroup
 
 	wg.Add(1)
-	go checkURL(url, url, url, &visited, &wg, &cc, showSuccessful)
+	go checkURL(url, url, url, &result, &wg, &cc)
 	wg.Wait()
 
-	return visited.URLs
+	return result.URLs
 }
 
 type connectionCounter struct {
@@ -44,64 +58,65 @@ func (c *connectionCounter) Count() int {
 	return c.count
 }
 
-type visitedList struct {
-	URLs []url.URL
+func (c *connectionCounter) Wait() {
+	for {
+		if c.Count() < 500 {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+// ScanResult reprents a list of URLs checked and the result for each
+type scannedURLs struct {
+	URLs []URLResult
 	mux  sync.Mutex
 }
 
-func (v *visitedList) Append(link url.URL) {
+func (v *scannedURLs) append(link URLResult) {
 	v.mux.Lock()
 	v.URLs = append(v.URLs, link)
 	v.mux.Unlock()
 }
 
-func (v *visitedList) List() []url.URL {
+func (v *scannedURLs) list() []URLResult {
 	v.mux.Lock()
 	defer v.mux.Unlock()
 	return v.URLs
 }
 
-func (v *visitedList) Contains(url url.URL) bool {
-	for _, u := range v.List() {
-		if u == url {
+func (v *scannedURLs) contains(url url.URL) bool {
+	for _, u := range v.list() {
+		if u.URL == url {
 			return true
 		}
 	}
 	return false
 }
 
-func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList,
-	wg *sync.WaitGroup, cc *connectionCounter, showSuccessful bool) {
+func checkURL(url url.URL, source url.URL, root url.URL, results *scannedURLs,
+	wg *sync.WaitGroup, cc *connectionCounter) {
 
 	defer wg.Done()
 
-	if visited.Contains(url) {
+	if results.contains(url) {
 		return
 	}
 
-	for {
-		if cc.Count() < 500 {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
+	cc.Wait()
 
 	cc.Inc()
 	pageResult, err := LoadPage(url, root.Host)
 	cc.Dec()
 
-	if visited.Contains(url) {
+	if results.contains(url) {
 		return
 	}
-	visited.Append(url)
 
 	if err != nil {
-		fmt.Println(source.String() + "\n  " + err.Error())
-		return
-	}
-
-	if showSuccessful == true || pageResult.StatusCode != 200 {
-		fmt.Println(source.String() + "\n  " + strconv.Itoa(pageResult.StatusCode) + " - " + url.String())
+		results.append(URLResult{url, pageResult.StatusCode, err.Error()})
+	} else {
+		results.append(URLResult{url, pageResult.StatusCode, ""})
 	}
 
 	if url.Host != root.Host {
@@ -111,6 +126,6 @@ func checkURL(url url.URL, source url.URL, root url.URL, visited *visitedList,
 	links := ExtractLinks(pageResult.Body, url)
 	for _, l := range links {
 		wg.Add(1)
-		go checkURL(l, url, root, visited, wg, cc, showSuccessful)
+		go checkURL(l, url, root, results, wg, cc)
 	}
 }
