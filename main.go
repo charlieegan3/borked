@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net"
@@ -20,9 +19,5 @@ func init() {
 
 	// Any Go framework complying with the Go http.Handler interface can be used.
 	// This includes, but is not limited to, Vanilla Go, Gin, Echo, Gorrila, Goa, etc.
-	go http.Serve(ln, http.HandlerFunc(handle))
-}
-
-func handle(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte(fmt.Sprintf("%v", r)))
+	go http.Serve(ln, http.HandlerFunc(ScanEndpoint))
 }

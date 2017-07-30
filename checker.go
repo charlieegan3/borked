@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/url"
 	"sync"
 	"time"
@@ -11,6 +12,19 @@ type URLResult struct {
 	URL        url.URL
 	StatusCode int
 	Message    string
+}
+
+//MarshalJSON converts a URLResult into a json string
+func (u *URLResult) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		URL        string `json:"url"`
+		StatusCode int    `json:"status_code"`
+		Message    string `json:"message"`
+	}{
+		URL:        u.URL.String(),
+		StatusCode: u.StatusCode,
+		Message:    u.Message,
+	})
 }
 
 // ByURL can be used to sort a list by the string URL value
