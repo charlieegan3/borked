@@ -23,18 +23,48 @@ resource "aws_api_gateway_rest_api" "api" {
 
 resource "aws_api_gateway_method" "method" {
   rest_api_id   = "${aws_api_gateway_rest_api.api.id}"
-  resource_id   = "${aws_api_gateway_rest_api.api.root_resource_id}"
+  resource_id   = "${aws_api_gateway_resource.resource.id}"
   http_method   = "GET"
   authorization = "NONE"
 }
 
+resource "aws_api_gateway_method_settings" "settings" {
+  rest_api_id = "${aws_api_gateway_rest_api.api.id}"
+  stage_name  = "${aws_api_gateway_stage.stage.stage_name}"
+  method_path = "${aws_api_gateway_resource.resource.path_part}/${aws_api_gateway_method.method.http_method}"
+
+  settings {
+    metrics_enabled = true
+    logging_level   = "INFO"
+  }
+}
+
 resource "aws_api_gateway_integration" "integration" {
   rest_api_id             = "${aws_api_gateway_rest_api.api.id}"
-  resource_id             = "${aws_api_gateway_rest_api.api.root_resource_id}"
+  resource_id             = "${aws_api_gateway_resource.resource.id}"
   http_method             = "${aws_api_gateway_method.method.http_method}"
   integration_http_method = "POST"
   type                    = "AWS"
   uri                     = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.lambda.arn}/invocations"
+}
+
+resource "aws_api_gateway_deployment" "deployment" {
+  depends_on = ["aws_api_gateway_integration.integration"]
+
+  rest_api_id = "${aws_api_gateway_rest_api.api.id}"
+  stage_name  = "whatiswrongwithme"
+}
+
+resource "aws_api_gateway_stage" "stage" {
+  stage_name    = "prod"
+  rest_api_id   = "${aws_api_gateway_rest_api.api.id}"
+  deployment_id = "${aws_api_gateway_deployment.deployment.id}"
+}
+
+resource "aws_api_gateway_resource" "resource" {
+  rest_api_id = "${aws_api_gateway_rest_api.api.id}"
+  parent_id   = "${aws_api_gateway_rest_api.api.root_resource_id}"
+  path_part   = "endpoint"
 }
 
 # Lambda
@@ -52,7 +82,7 @@ resource "aws_lambda_function" "lambda" {
   filename         = "seed_handler.zip"
   function_name    = "mylambda"
   role             = "${aws_iam_role.role.arn}"
-  handler          = "lambda.lambda_handler"
+  handler          = "hello_python.lambda_handler"
   runtime          = "python2.7"
   source_code_hash = "${base64sha256(file("seed_handler.zip"))}"
 }
@@ -76,4 +106,25 @@ resource "aws_iam_role" "role" {
   ]
 }
 POLICY
+}
+
+resource "aws_iam_role_policy" "test_policy" {
+  name = "test_policy"
+  role = "${aws_iam_role.role.id}"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "cloudwatch:*",
+        "logs:*"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
 }
