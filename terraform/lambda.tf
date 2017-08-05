@@ -8,12 +8,13 @@ resource "aws_lambda_permission" "apigw_lambda" {
 }
 
 resource "aws_lambda_function" "lambda" {
-  filename         = "seed_handler.zip"
+  filename         = "../handler.zip"
   function_name    = "mylambda"
   role             = "${aws_iam_role.role.arn}"
-  handler          = "hello_python.lambda_handler"
+  handler          = "handler.Handle"
   runtime          = "python2.7"
-  source_code_hash = "${base64sha256(file("seed_handler.zip"))}"
+  timeout          = "30"
+  source_code_hash = "${base64sha256(file("../handler.zip"))}"
 }
 
 resource "aws_iam_role" "role" {
