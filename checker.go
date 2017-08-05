@@ -36,14 +36,16 @@ func (a ByURL) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByURL) Less(i, j int) bool { return a[i].URL.String() < a[j].URL.String() }
 
 // Scan for broken links starting from a given page
-func Scan(url url.URL) []URLResult {
+func Scan(url url.URL, timeOut string) []URLResult {
 	var result scannedURLs
 
 	var cc connectionCounter
 	var wg sync.WaitGroup
 
+	startTime := time.Now()
+
 	wg.Add(1)
-	go checkURL(url, url, url, &result, &wg, &cc)
+	go checkURL(url, url, url, &result, &wg, &cc, &startTime, timeOut)
 	wg.Wait()
 
 	return result.URLs
@@ -109,7 +111,7 @@ func (v *scannedURLs) contains(url url.URL) bool {
 }
 
 func checkURL(url url.URL, source url.URL, root url.URL, results *scannedURLs,
-	wg *sync.WaitGroup, cc *connectionCounter) {
+	wg *sync.WaitGroup, cc *connectionCounter, startTime *time.Time, timeOut string) {
 
 	defer wg.Done()
 
@@ -117,10 +119,20 @@ func checkURL(url url.URL, source url.URL, root url.URL, results *scannedURLs,
 		return
 	}
 
+	timeOutDuration, err := time.ParseDuration(timeOut)
+	if err != nil {
+		return
+	}
+
+	if time.Since(*startTime) > timeOutDuration {
+		results.append(URLResult{url, -1, "incomplete"})
+		return
+	}
+
 	cc.Wait()
 
 	cc.Inc()
-	pageResult, err := LoadPage(url, root.Host)
+	pageResult, err := LoadPage(url, root.Host, "5s")
 	cc.Dec()
 
 	if results.contains(url) {
@@ -140,6 +152,6 @@ func checkURL(url url.URL, source url.URL, root url.URL, results *scannedURLs,
 	links := ExtractLinks(pageResult.Body, url)
 	for _, l := range links {
 		wg.Add(1)
-		go checkURL(l, url, root, results, wg, cc)
+		go checkURL(l, url, root, results, wg, cc, startTime, timeOut)
 	}
 }

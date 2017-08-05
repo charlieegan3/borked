@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"sort"
 	"testing"
+	"time"
 )
 
 func TestCrawling(t *testing.T) {
@@ -38,7 +39,7 @@ func TestCrawling(t *testing.T) {
 
 	startPage, _ := url.Parse(localServer.URL + "/")
 
-	result := Scan(*startPage)
+	result := Scan(*startPage, "10s")
 	sort.Sort(ByURL(result))
 
 	if len(result) != 5 {
@@ -80,5 +81,53 @@ func TestCrawling(t *testing.T) {
 		if v != expectedMessages[i] {
 			t.Error("Unexpected Message: ", v)
 		}
+	}
+}
+
+func TestCrawlingTimeout(t *testing.T) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			pageContent := `
+                <html>
+                    <a href="/slow">Page 2</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/slow" {
+			time.Sleep(5 * time.Millisecond) // this pushes the task past the soft timeout
+			pageContent := `
+                <html>
+                    <a href="/saved_for_next_time">Page 3</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/saved_for_next_time" {
+			pageContent := `
+                <html>
+                    <a href="/missed">Page 4</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/missed" {
+			pageContent := `
+                <html>
+                    missed until the next attempt
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		}
+	}))
+
+	startPage, _ := url.Parse(localServer.URL + "/")
+
+	result := Scan(*startPage, "3ms") // make sure after completing the second page the time has run out
+
+	if len(result) != 3 {
+		t.Error("Expected 3 links, got", len(result))
+	}
+
+	if result[len(result)-1].StatusCode != -1 {
+		fmt.Println(result[len(result)-1].StatusCode)
+		t.Error("Expected final page to be incomplete")
 	}
 }

@@ -21,7 +21,7 @@ func ScanEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := Scan(*url)
+	result := Scan(*url, "10s")
 	sort.Sort(ByURL(result))
 	jsonResult, _ := json.Marshal(result)
 	w.Write(jsonResult)
