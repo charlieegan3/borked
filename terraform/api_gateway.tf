@@ -1,3 +1,7 @@
+variable "api_gateway_stage" {
+  default = "production"
+}
+
 resource "aws_api_gateway_rest_api" "default" {
   name        = "${var.project}"
   description = "API for the ${var.project} lambda function"
@@ -6,24 +10,20 @@ resource "aws_api_gateway_rest_api" "default" {
 resource "aws_api_gateway_deployment" "default" {
   depends_on  = ["aws_api_gateway_integration.default"]
   rest_api_id = "${aws_api_gateway_rest_api.default.id}"
-  stage_name  = "dev"
-}
-
-resource "aws_api_gateway_stage" "default" {
-  stage_name    = "prod"
-  rest_api_id   = "${aws_api_gateway_rest_api.default.id}"
-  deployment_id = "${aws_api_gateway_deployment.default.id}"
+  stage_name  = "${var.api_gateway_stage}"
 }
 
 resource "aws_api_gateway_method_settings" "default" {
   rest_api_id = "${aws_api_gateway_rest_api.default.id}"
-  stage_name  = "${aws_api_gateway_stage.default.stage_name}"
+  stage_name  = "${var.api_gateway_stage}"
   method_path = "${aws_api_gateway_resource.default.path_part}/*"
 
   settings {
     metrics_enabled = true
     logging_level   = "INFO"
   }
+
+  depends_on = ["aws_api_gateway_deployment.default"]
 }
 
 resource "aws_api_gateway_resource" "default" {
