@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 )
@@ -141,6 +142,8 @@ func checkURL(url url.URL, source url.URL, root url.URL, results *scannedURLs,
 
 	if err != nil {
 		results.append(URLResult{url, pageResult.StatusCode, err.Error()})
+	} else if err != nil && strings.Contains(err.Error(), "request canceled while waiting for connection") { // connection didn't start
+		results.append(URLResult{url, -1, "incomplete"})
 	} else {
 		results.append(URLResult{url, pageResult.StatusCode, ""})
 	}
