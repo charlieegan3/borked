@@ -9,9 +9,15 @@ import (
 
 //ScanEndpoint is a handler for scan requests from the API gateway
 func ScanEndpoint(w http.ResponseWriter, r *http.Request) {
-	url, err := url.Parse(r.URL.Query()["url"][0])
+	urlParams := r.URL.Query()["url"]
+	if len(urlParams) == 0 {
+		http.Error(w, "no url", http.StatusBadRequest)
+		return
+	}
+
+	url, err := url.Parse(urlParams[0])
 	if err != nil {
-		http.Error(w, "my own error message", http.StatusBadRequest)
+		http.Error(w, "url parse failed", http.StatusBadRequest)
 		return
 	}
 

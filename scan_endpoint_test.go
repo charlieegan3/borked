@@ -56,3 +56,20 @@ func TestScanEndpoint(t *testing.T) {
 			rr.Body.String(), expected)
 	}
 }
+
+func TestScanEndpointNoUrl(t *testing.T) {
+	req, err := http.NewRequest("GET", "/?no_url_param", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(ScanEndpoint)
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusBadRequest {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusBadRequest)
+	}
+}
