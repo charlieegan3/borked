@@ -1,24 +1,24 @@
-resource "aws_api_gateway_rest_api" "test" {
-  name        = "MyDemoAPI"
-  description = "This is my API for demonstration purposes"
+resource "aws_api_gateway_rest_api" "default" {
+  name        = "${var.project}"
+  description = "API for the ${var.project} lambda function"
 }
 
-resource "aws_api_gateway_deployment" "test" {
-  depends_on  = ["aws_api_gateway_integration.test"]
-  rest_api_id = "${aws_api_gateway_rest_api.test.id}"
+resource "aws_api_gateway_deployment" "default" {
+  depends_on  = ["aws_api_gateway_integration.default"]
+  rest_api_id = "${aws_api_gateway_rest_api.default.id}"
   stage_name  = "dev"
 }
 
-resource "aws_api_gateway_stage" "test" {
+resource "aws_api_gateway_stage" "default" {
   stage_name    = "prod"
-  rest_api_id   = "${aws_api_gateway_rest_api.test.id}"
-  deployment_id = "${aws_api_gateway_deployment.test.id}"
+  rest_api_id   = "${aws_api_gateway_rest_api.default.id}"
+  deployment_id = "${aws_api_gateway_deployment.default.id}"
 }
 
-resource "aws_api_gateway_method_settings" "s" {
-  rest_api_id = "${aws_api_gateway_rest_api.test.id}"
-  stage_name  = "${aws_api_gateway_stage.test.stage_name}"
-  method_path = "${aws_api_gateway_resource.test.path_part}/*"
+resource "aws_api_gateway_method_settings" "default" {
+  rest_api_id = "${aws_api_gateway_rest_api.default.id}"
+  stage_name  = "${aws_api_gateway_stage.default.stage_name}"
+  method_path = "${aws_api_gateway_resource.default.path_part}/*"
 
   settings {
     metrics_enabled = true
@@ -26,38 +26,38 @@ resource "aws_api_gateway_method_settings" "s" {
   }
 }
 
-resource "aws_api_gateway_resource" "test" {
-  rest_api_id = "${aws_api_gateway_rest_api.test.id}"
-  parent_id   = "${aws_api_gateway_rest_api.test.root_resource_id}"
+resource "aws_api_gateway_resource" "default" {
+  rest_api_id = "${aws_api_gateway_rest_api.default.id}"
+  parent_id   = "${aws_api_gateway_rest_api.default.root_resource_id}"
   path_part   = "process"
 }
 
-resource "aws_api_gateway_method" "test" {
-  rest_api_id   = "${aws_api_gateway_rest_api.test.id}"
-  resource_id   = "${aws_api_gateway_resource.test.id}"
+resource "aws_api_gateway_method" "default" {
+  rest_api_id   = "${aws_api_gateway_rest_api.default.id}"
+  resource_id   = "${aws_api_gateway_resource.default.id}"
   http_method   = "ANY"
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_integration" "test" {
-  rest_api_id             = "${aws_api_gateway_rest_api.test.id}"
-  resource_id             = "${aws_api_gateway_resource.test.id}"
-  http_method             = "${aws_api_gateway_method.test.http_method}"
+resource "aws_api_gateway_integration" "default" {
+  rest_api_id             = "${aws_api_gateway_rest_api.default.id}"
+  resource_id             = "${aws_api_gateway_resource.default.id}"
+  http_method             = "${aws_api_gateway_method.default.http_method}"
   type                    = "AWS_PROXY"
   uri                     = "arn:aws:apigateway:${var.region}:lambda:path/2015-03-31/functions/${aws_lambda_function.lambda.arn}/invocations"
   integration_http_method = "POST"
 }
 
 resource "aws_api_gateway_method_response" "response_method" {
-  rest_api_id = "${aws_api_gateway_rest_api.test.id}"
-  resource_id = "${aws_api_gateway_resource.test.id}"
-  http_method = "${aws_api_gateway_integration.test.http_method}"
+  rest_api_id = "${aws_api_gateway_rest_api.default.id}"
+  resource_id = "${aws_api_gateway_resource.default.id}"
+  http_method = "${aws_api_gateway_integration.default.http_method}"
   status_code = "200"
 }
 
 resource "aws_api_gateway_integration_response" "response_method_integration" {
-  rest_api_id = "${aws_api_gateway_rest_api.test.id}"
-  resource_id = "${aws_api_gateway_resource.test.id}"
+  rest_api_id = "${aws_api_gateway_rest_api.default.id}"
+  resource_id = "${aws_api_gateway_resource.default.id}"
   http_method = "${aws_api_gateway_method_response.response_method.http_method}"
   status_code = "${aws_api_gateway_method_response.response_method.status_code}"
 }

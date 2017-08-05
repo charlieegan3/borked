@@ -1,9 +1,9 @@
 resource "aws_api_gateway_account" "default" {
-  cloudwatch_role_arn = "${aws_iam_role.cloudwatch.arn}"
+  cloudwatch_role_arn = "${aws_iam_role.apigw.arn}"
 }
 
-resource "aws_iam_role" "cloudwatch" {
-  name = "api_gateway_cloudwatch_global"
+resource "aws_iam_role" "apigw" {
+  name = "${var.project}-apigw-role"
 
   assume_role_policy = <<EOF
 {
@@ -23,8 +23,8 @@ EOF
 }
 
 resource "aws_iam_role_policy" "cloudwatch" {
-  name = "default"
-  role = "${aws_iam_role.cloudwatch.id}"
+  name = "${var.project}-apigw-cloudwatch-policy"
+  role = "${aws_iam_role.apigw.id}"
 
   policy = <<EOF
 {
