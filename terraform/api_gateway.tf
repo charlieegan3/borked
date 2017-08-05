@@ -35,7 +35,7 @@ resource "aws_api_gateway_resource" "default" {
 resource "aws_api_gateway_method" "default" {
   rest_api_id   = "${aws_api_gateway_rest_api.default.id}"
   resource_id   = "${aws_api_gateway_resource.default.id}"
-  http_method   = "ANY"
+  http_method   = "GET"
   authorization = "NONE"
 }
 
