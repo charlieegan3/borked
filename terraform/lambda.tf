@@ -15,6 +15,7 @@ resource "aws_lambda_function" "lambda" {
   runtime          = "python2.7"
   timeout          = "30"
   source_code_hash = "${base64sha256(file("../handler.zip"))}"
+  memory_size      = "512"
 }
 
 resource "aws_iam_role" "lambda" {
