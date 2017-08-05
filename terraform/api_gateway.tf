@@ -29,14 +29,8 @@ resource "aws_api_gateway_method_settings" "s" {
 resource "aws_api_gateway_resource" "test" {
   rest_api_id = "${aws_api_gateway_rest_api.test.id}"
   parent_id   = "${aws_api_gateway_rest_api.test.root_resource_id}"
-  path_part   = "mytestresource"
+  path_part   = "process"
 }
-
-# methods
-# methods
-# methods
-# methods
-# methods
 
 resource "aws_api_gateway_method" "test" {
   rest_api_id   = "${aws_api_gateway_rest_api.test.id}"

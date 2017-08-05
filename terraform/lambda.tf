@@ -4,7 +4,7 @@ resource "aws_lambda_permission" "apigw_lambda" {
   function_name = "${aws_lambda_function.lambda.arn}"
   principal     = "apigateway.amazonaws.com"
 
-  source_arn = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.test.id}/*/*${aws_api_gateway_resource.test.path}"
+  source_arn = "arn:aws:execute-api:${var.region}:${data.aws_caller_identity.current.account_id}:${aws_api_gateway_rest_api.test.id}/*/*/*"
 }
 
 resource "aws_lambda_function" "lambda" {
