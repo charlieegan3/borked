@@ -118,3 +118,32 @@ func TestCrawlingTimeout(t *testing.T) {
 		t.Error("Expected 1 incomplete link, got", len(incomplete))
 	}
 }
+
+func TestCrawlingCyclic(t *testing.T) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			pageContent := `
+                <html>
+                    <a href="/page2">Page 2</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/page2" {
+			pageContent := `
+                <html>
+                    <a href="/">Home again</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		}
+	}))
+
+	startPage, _ := url.Parse(localServer.URL + "/")
+
+	completed, _ := Scan(*startPage, []url.URL{*startPage}, 1, time.Second)
+	sort.Sort(ByURL(completed))
+
+	if len(completed) != 2 {
+		t.Error("Expected 2 links, got", len(completed))
+	}
+}

@@ -57,9 +57,11 @@ type unstartedURLs struct {
 }
 
 func (v *unstartedURLs) append(item UnstartedURL) {
-	v.mux.Lock()
-	v.Elements = append(v.Elements, item)
-	v.mux.Unlock()
+	if !v.contains(item.URL) {
+		v.mux.Lock()
+		v.Elements = append(v.Elements, item)
+		v.mux.Unlock()
+	}
 }
 
 func (v *unstartedURLs) pop() (UnstartedURL, error) {
@@ -76,15 +78,37 @@ func (v *unstartedURLs) pop() (UnstartedURL, error) {
 	return element, nil
 }
 
+func (v *unstartedURLs) contains(item url.URL) bool {
+	found := false
+	for _, e := range v.Elements {
+		if e.URL == item {
+			return true
+		}
+	}
+	return found
+}
+
 type completedURLs struct {
 	Elements []URLResult
 	mux      sync.Mutex
 }
 
 func (v *completedURLs) append(item URLResult) {
-	v.mux.Lock()
-	v.Elements = append(v.Elements, item)
-	v.mux.Unlock()
+	if !v.contains(item.URL) {
+		v.mux.Lock()
+		v.Elements = append(v.Elements, item)
+		v.mux.Unlock()
+	}
+}
+
+func (v *completedURLs) contains(item url.URL) bool {
+	found := false
+	for _, e := range v.Elements {
+		if e.URL == item {
+			return true
+		}
+	}
+	return found
 }
 
 type idleCounter struct {
@@ -140,21 +164,23 @@ func work(ctx context.Context, wg *sync.WaitGroup, idle *idleCounter, host strin
 
 	for {
 		unstartedURL, err := unstarted.pop()
-		if err == nil {
-			idle.Dec()
-			result := make(chan URLResult)
-			go LoadPage(unstartedURL.URL, host, result, unstarted)
-			select {
-			case urlResult := <-result:
-				completed.append(urlResult)
-			case <-ctx.Done():
-				unstarted.append(unstartedURL)
-				return ctx.Err()
-			}
-		} else {
-			idle.Inc()
-			if idle.All() {
-				return nil
+		if !completed.contains(unstartedURL.URL) {
+			if err == nil {
+				idle.Dec()
+				result := make(chan URLResult)
+				go LoadPage(unstartedURL.URL, host, result, unstarted)
+				select {
+				case urlResult := <-result:
+					completed.append(urlResult)
+				case <-ctx.Done():
+					unstarted.append(unstartedURL)
+					return ctx.Err()
+				}
+			} else {
+				idle.Inc()
+				if idle.All() {
+					return nil
+				}
 			}
 		}
 	}
