@@ -15,14 +15,14 @@ func ScanEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, err := url.Parse(urlParams[0])
+	rootURL, err := url.Parse(urlParams[0])
 	if err != nil {
 		http.Error(w, "url parse failed", http.StatusBadRequest)
 		return
 	}
 
-	result := Scan(*url, "10s")
-	sort.Sort(ByURL(result))
-	jsonResult, _ := json.Marshal(result)
+	completed, _ := Scan(*rootURL, []url.URL{*rootURL})
+	sort.Sort(ByURL(completed))
+	jsonResult, _ := json.Marshal(completed)
 	w.Write(jsonResult)
 }

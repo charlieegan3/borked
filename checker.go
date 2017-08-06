@@ -1,9 +1,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/url"
-	"strings"
 	"sync"
 	"time"
 )
@@ -36,125 +37,110 @@ func (a ByURL) Len() int           { return len(a) }
 func (a ByURL) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByURL) Less(i, j int) bool { return a[i].URL.String() < a[j].URL.String() }
 
-// Scan for broken links starting from a given page
-func Scan(url url.URL, timeOut string) []URLResult {
-	var result scannedURLs
-
-	var cc connectionCounter
-	var wg sync.WaitGroup
-
-	startTime := time.Now()
-
-	wg.Add(1)
-	go checkURL(url, url, url, &result, &wg, &cc, &startTime, timeOut)
-	wg.Wait()
-
-	return result.URLs
+type unstartedURLs struct {
+	Elements []url.URL
+	mux      sync.Mutex
 }
 
-type connectionCounter struct {
-	count int
-	mux   sync.Mutex
-}
-
-func (c *connectionCounter) Inc() {
-	c.mux.Lock()
-	c.count++
-	c.mux.Unlock()
-}
-
-func (c *connectionCounter) Dec() {
-	c.mux.Lock()
-	c.count--
-	c.mux.Unlock()
-}
-
-func (c *connectionCounter) Count() int {
-	c.mux.Lock()
-	defer c.mux.Unlock()
-	return c.count
-}
-
-func (c *connectionCounter) Wait() {
-	for {
-		if c.Count() < 500 {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-}
-
-// ScanResult reprents a list of URLs checked and the result for each
-type scannedURLs struct {
-	URLs []URLResult
-	mux  sync.Mutex
-}
-
-func (v *scannedURLs) append(link URLResult) {
+func (v *unstartedURLs) append(item url.URL) {
 	v.mux.Lock()
-	v.URLs = append(v.URLs, link)
+	v.Elements = append(v.Elements, item)
 	v.mux.Unlock()
 }
 
-func (v *scannedURLs) list() []URLResult {
+func (v *unstartedURLs) pop() (url.URL, error) {
 	v.mux.Lock()
 	defer v.mux.Unlock()
-	return v.URLs
-}
 
-func (v *scannedURLs) contains(url url.URL) bool {
-	for _, u := range v.list() {
-		if u.URL == url {
-			return true
-		}
+	length := len(v.Elements)
+	if length == 0 {
+		return url.URL{}, errors.New("Empty")
 	}
-	return false
+
+	var element url.URL
+	element, v.Elements = v.Elements[length-1], v.Elements[:length-1]
+	return element, nil
 }
 
-func checkURL(url url.URL, source url.URL, root url.URL, results *scannedURLs,
-	wg *sync.WaitGroup, cc *connectionCounter, startTime *time.Time, timeOut string) {
+type completedURLs struct {
+	Elements []URLResult
+	mux      sync.Mutex
+}
 
+func (v *completedURLs) append(item URLResult) {
+	v.mux.Lock()
+	v.Elements = append(v.Elements, item)
+	v.mux.Unlock()
+}
+
+type idleCounter struct {
+	Count int
+	Total int
+	mux   sync.Mutex
+}
+
+func (c *idleCounter) Inc() {
+	c.mux.Lock()
+	if c.Count < c.Total {
+		c.Count++
+	}
+	c.mux.Unlock()
+}
+
+func (c *idleCounter) Dec() {
+	c.mux.Lock()
+	if c.Count > 0 {
+		c.Count--
+	}
+	c.mux.Unlock()
+}
+
+func (c *idleCounter) All() bool {
+	return c.Count == c.Total
+}
+
+// Scan for broken links starting from a given page
+func Scan(root url.URL, urls []url.URL) ([]URLResult, []url.URL) {
+	concurrency := 3
+
+	var wg sync.WaitGroup
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	unstarted := unstartedURLs{Elements: urls}
+	var completed completedURLs
+	idle := idleCounter{Total: concurrency}
+
+	for i := 0; i < concurrency; i++ {
+		wg.Add(1)
+		go work(ctx, &wg, &idle, root.Host, &unstarted, &completed)
+	}
+	wg.Wait()
+
+	return completed.Elements, unstarted.Elements
+}
+
+func work(ctx context.Context, wg *sync.WaitGroup, idle *idleCounter, host string, unstarted *unstartedURLs, completed *completedURLs) error {
 	defer wg.Done()
 
-	if results.contains(url) {
-		return
-	}
-
-	timeOutDuration, err := time.ParseDuration(timeOut)
-	if err != nil {
-		return
-	}
-
-	if time.Since(*startTime) > timeOutDuration {
-		results.append(URLResult{url, -1, "incomplete"})
-		return
-	}
-
-	cc.Wait()
-
-	cc.Inc()
-	pageResult, err := LoadPage(url, root.Host, "5s")
-	cc.Dec()
-
-	if results.contains(url) {
-		return
-	}
-
-	if err != nil {
-		results.append(URLResult{url, pageResult.StatusCode, err.Error()})
-	} else if err != nil && strings.Contains(err.Error(), "request canceled while waiting for connection") { // connection didn't start
-		results.append(URLResult{url, -1, "incomplete"})
-	} else {
-		results.append(URLResult{url, pageResult.StatusCode, ""})
-	}
-
-	if url.Host != root.Host {
-		return
-	}
-
-	links := ExtractLinks(pageResult.Body, url)
-	for _, l := range links {
-		wg.Add(1)
-		go checkURL(l, url, root, results, wg, cc, startTime, timeOut)
+	for {
+		url, err := unstarted.pop()
+		if err == nil {
+			idle.Dec()
+			result := make(chan URLResult)
+			go LoadPage(url, host, result, unstarted)
+			select {
+			case urlResult := <-result:
+				completed.append(urlResult)
+			case <-ctx.Done():
+				unstarted.append(url)
+				return ctx.Err()
+			}
+		} else {
+			idle.Inc()
+			if idle.All() {
+				return nil
+			}
+		}
 	}
 }

@@ -5,40 +5,26 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
-
-// PageResult a structure for storing a loaded page
-type PageResult struct {
-	StatusCode int
-	Body       string
-}
 
 // LoadPage requests the document at the provided URL
 // returns status code (and body if HTML)
-func LoadPage(url url.URL, host string, timeOut string) (PageResult, error) {
-	var pr PageResult
-
+func LoadPage(url url.URL, host string, result chan URLResult, unstarted *unstartedURLs) {
 	req, err := http.NewRequest("GET", url.String(), nil)
 
 	if err != nil {
-		return pr, err
+		result <- URLResult{url, 0, err.Error()}
+		return
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0")
 
-	timeOutDuration, err := time.ParseDuration(timeOut)
-	if err != nil {
-		return pr, err
-	}
-
-	client := http.Client{
-		Timeout: timeOutDuration,
-	}
+	var client http.Client
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return pr, err
+		result <- URLResult{url, 0, err.Error()}
+		return
 	}
 
 	contentType := resp.Header.Get("Content-Type")
@@ -49,12 +35,17 @@ func LoadPage(url url.URL, host string, timeOut string) (PageResult, error) {
 	if url.Host == host && strings.Contains(contentType, "html") {
 		rawBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			return pr, err
+			result <- URLResult{url, 0, err.Error()}
+			return
 		}
 		body = string(rawBody)
 	} else {
 		body = ""
 	}
 
-	return PageResult{resp.StatusCode, string(body)}, nil
+	for _, v := range ExtractLinks(body, url) {
+		unstarted.append(v)
+	}
+
+	result <- URLResult{url, resp.StatusCode, ""}
 }
