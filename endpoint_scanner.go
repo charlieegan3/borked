@@ -23,10 +23,19 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 			return
 		}
 
-		completed, _ := Scan(*rootURL, []url.URL{*rootURL}, concurrency, timeout)
+		completed, incomplete := Scan(*rootURL, []url.URL{*rootURL}, concurrency, timeout)
 
 		sort.Sort(ByURL(completed))
-		jsonResult, _ := json.Marshal(completed)
+
+		responseData := struct {
+			Completed  []URLResult    `json:"completed"`
+			Incomplete []UnstartedURL `json:"incomplete"`
+		}{
+			completed,
+			incomplete,
+		}
+
+		jsonResult, _ := json.Marshal(responseData)
 		w.Write(jsonResult)
 	}
 }

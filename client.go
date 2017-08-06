@@ -44,7 +44,7 @@ func LoadPage(url url.URL, host string, result chan URLResult, unstarted *unstar
 	}
 
 	for _, v := range ExtractLinks(body, url) {
-		unstarted.append(v)
+		unstarted.append(UnstartedURL{URL: v})
 	}
 
 	result <- URLResult{url, resp.StatusCode, ""}

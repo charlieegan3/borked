@@ -51,7 +51,51 @@ func TestScanEndpoint(t *testing.T) {
 	}
 
 	lsURL := localServer.URL
-	expected := fmt.Sprintf(`[{"url":"%s","status_code":200,"message":""},{"url":"%s/404","status_code":404,"message":""},{"url":"%s/page2","status_code":200,"message":""},{"url":"%s/page3","status_code":200,"message":""},{"url":"http://nowhere.com","status_code":0,"message":"Get http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}]`, lsURL, lsURL, lsURL, lsURL)
+	expected := fmt.Sprintf(`{"completed":[{"url":"%v","status_code":200,"message":""},{"url":"%v/404","status_code":404,"message":""},{"url":"%v/page2","status_code":200,"message":""},{"url":"%v/page3","status_code":200,"message":""},{"url":"http://nowhere.com","status_code":0,"message":"Get http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}],"incomplete":[]}`, lsURL, lsURL, lsURL, lsURL)
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestScanEndpointIncomplete(t *testing.T) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			pageContent := `
+            <html>
+            <a href="/page2">Page 2</a>
+            <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/page2" {
+			time.Sleep(time.Second)
+			pageContent := `
+            <html>
+            <a href="/page3">Page 3</a>
+            <html>`
+
+			fmt.Fprintln(w, pageContent)
+		}
+	}))
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("/?url=%s", localServer.URL), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(BuildHandler(1, 5*time.Millisecond))
+
+	handler.ServeHTTP(rr, req)
+
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusOK)
+	}
+
+	lsURL := localServer.URL
+	expected := fmt.Sprintf(
+		`{"completed":[{"url":"%v","status_code":200,"message":""}],"incomplete":[{"url":"%v/page2"}]}`, lsURL, lsURL)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)

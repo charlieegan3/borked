@@ -37,27 +37,41 @@ func (a ByURL) Len() int           { return len(a) }
 func (a ByURL) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a ByURL) Less(i, j int) bool { return a[i].URL.String() < a[j].URL.String() }
 
+//UnstartedURL is a URL yet to be scanned
+type UnstartedURL struct {
+	URL url.URL
+}
+
+//MarshalJSON converts a URLResult into a json string
+func (u *UnstartedURL) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		URL string `json:"url"`
+	}{
+		URL: u.URL.String(),
+	})
+}
+
 type unstartedURLs struct {
-	Elements []url.URL
+	Elements []UnstartedURL
 	mux      sync.Mutex
 }
 
-func (v *unstartedURLs) append(item url.URL) {
+func (v *unstartedURLs) append(item UnstartedURL) {
 	v.mux.Lock()
 	v.Elements = append(v.Elements, item)
 	v.mux.Unlock()
 }
 
-func (v *unstartedURLs) pop() (url.URL, error) {
+func (v *unstartedURLs) pop() (UnstartedURL, error) {
 	v.mux.Lock()
 	defer v.mux.Unlock()
 
 	length := len(v.Elements)
 	if length == 0 {
-		return url.URL{}, errors.New("Empty")
+		return UnstartedURL{}, errors.New("Empty")
 	}
 
-	var element url.URL
+	var element UnstartedURL
 	element, v.Elements = v.Elements[length-1], v.Elements[:length-1]
 	return element, nil
 }
@@ -100,12 +114,15 @@ func (c *idleCounter) All() bool {
 }
 
 // Scan for broken links starting from a given page
-func Scan(root url.URL, urls []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []url.URL) {
+func Scan(root url.URL, urls []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []UnstartedURL) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	unstarted := unstartedURLs{Elements: urls}
+	var unstarted unstartedURLs
+	for _, v := range urls {
+		unstarted.append(UnstartedURL{URL: v})
+	}
 	var completed completedURLs
 	idle := idleCounter{Total: concurrency}
 
@@ -122,16 +139,16 @@ func work(ctx context.Context, wg *sync.WaitGroup, idle *idleCounter, host strin
 	defer wg.Done()
 
 	for {
-		url, err := unstarted.pop()
+		unstartedURL, err := unstarted.pop()
 		if err == nil {
 			idle.Dec()
 			result := make(chan URLResult)
-			go LoadPage(url, host, result, unstarted)
+			go LoadPage(unstartedURL.URL, host, result, unstarted)
 			select {
 			case urlResult := <-result:
 				completed.append(urlResult)
 			case <-ctx.Done():
-				unstarted.append(url)
+				unstarted.append(unstartedURL)
 				return ctx.Err()
 			}
 		} else {
