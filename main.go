@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net"
 	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net/apigatewayproxy"
@@ -19,5 +20,5 @@ func init() {
 
 	// Any Go framework complying with the Go http.Handler interface can be used.
 	// This includes, but is not limited to, Vanilla Go, Gin, Echo, Gorrila, Goa, etc.
-	go http.Serve(ln, http.HandlerFunc(ScanEndpoint))
+	go http.Serve(ln, http.HandlerFunc(BuildHandler(10, 10*time.Second)))
 }

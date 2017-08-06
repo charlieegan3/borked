@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 )
 
 func TestScanEndpoint(t *testing.T) {
@@ -40,7 +41,7 @@ func TestScanEndpoint(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(ScanEndpoint)
+	handler := http.HandlerFunc(BuildHandler(10, 10*time.Second))
 
 	handler.ServeHTTP(rr, req)
 
@@ -64,7 +65,7 @@ func TestScanEndpointNoUrl(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(ScanEndpoint)
+	handler := http.HandlerFunc(BuildHandler(10, 10*time.Second))
 
 	handler.ServeHTTP(rr, req)
 
