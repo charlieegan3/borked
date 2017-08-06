@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"time"
 )
 
 //ScanEndpoint is a handler for scan requests from the API gateway
@@ -21,7 +22,7 @@ func ScanEndpoint(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	completed, _ := Scan(*rootURL, []url.URL{*rootURL})
+	completed, _ := Scan(*rootURL, []url.URL{*rootURL}, 10, 10*time.Second)
 	sort.Sort(ByURL(completed))
 	jsonResult, _ := json.Marshal(completed)
 	w.Write(jsonResult)

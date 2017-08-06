@@ -100,11 +100,9 @@ func (c *idleCounter) All() bool {
 }
 
 // Scan for broken links starting from a given page
-func Scan(root url.URL, urls []url.URL) ([]URLResult, []url.URL) {
-	concurrency := 3
-
+func Scan(root url.URL, urls []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []url.URL) {
 	var wg sync.WaitGroup
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	unstarted := unstartedURLs{Elements: urls}

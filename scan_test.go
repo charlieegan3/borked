@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"sort"
 	"testing"
+	"time"
 )
 
 func TestCrawling(t *testing.T) {
@@ -38,7 +39,7 @@ func TestCrawling(t *testing.T) {
 
 	startPage, _ := url.Parse(localServer.URL + "/")
 
-	completed, _ := Scan(*startPage, []url.URL{*startPage})
+	completed, _ := Scan(*startPage, []url.URL{*startPage}, 1, time.Second)
 	sort.Sort(ByURL(completed))
 
 	if len(completed) != 5 {
@@ -80,5 +81,40 @@ func TestCrawling(t *testing.T) {
 		if v != expectedMessages[i] {
 			t.Error("Unexpected Message: ", v)
 		}
+	}
+}
+
+func TestCrawlingTimeout(t *testing.T) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			pageContent := `
+                <html>
+                    <a href="/page2">Page 2</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/page2" {
+			time.Sleep(5 * time.Millisecond)
+			pageContent := `
+                <html>
+                    <a href="/page3">Page 3</a>
+                    <a href="/404">Borked</a>
+                    <a href="http://nowhere.com">Borked</a>
+                <html>`
+
+			fmt.Fprintln(w, pageContent)
+		}
+	}))
+
+	startPage, _ := url.Parse(localServer.URL + "/")
+
+	completed, incomplete := Scan(*startPage, []url.URL{*startPage}, 1, 3*time.Millisecond)
+
+	if len(completed) != 1 {
+		t.Error("Expected 1 completed link, got", len(completed))
+	}
+
+	if len(incomplete) != 1 {
+		t.Error("Expected 1 incomplete link, got", len(incomplete))
 	}
 }
