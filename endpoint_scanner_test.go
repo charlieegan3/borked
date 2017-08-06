@@ -102,6 +102,52 @@ func TestScanEndpointIncomplete(t *testing.T) {
 	}
 }
 
+func TestScanEndpointMultipleStartingUrls(t *testing.T) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			pageContent := `
+            <html>
+            <a href="/page2">Page 2</a>
+            <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/page2" {
+			time.Sleep(time.Second)
+			pageContent := `
+            <html>
+            <a href="/page3">Page 3</a>
+            <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/page3" {
+			pageContent := `
+            <html>
+            <a href="/page2">Page 2</a>
+            <html>`
+
+			fmt.Fprintln(w, pageContent)
+		}
+	}))
+
+	lsURL := localServer.URL
+	req, err := http.NewRequest("GET", fmt.Sprintf("/?url=%s&url=%s/page3", lsURL, lsURL), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(BuildHandler(2, 5*time.Millisecond))
+
+	handler.ServeHTTP(rr, req)
+
+	expected := fmt.Sprintf(
+		`{"completed":[{"url":"%v","status_code":200,"message":""},{"url":"%v/page3","status_code":200,"message":""}],"incomplete":[{"url":"%v/page2"}]}`, lsURL, lsURL, lsURL)
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
 func TestScanEndpointNoUrl(t *testing.T) {
 	req, err := http.NewRequest("GET", "/?no_url_param", nil)
 	if err != nil {

@@ -11,19 +11,23 @@ import (
 //BuildHandler configures borked handlers with timeouts and concurrency settings
 func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		urlParams := r.URL.Query()["url"]
-		if len(urlParams) == 0 {
+		urls := r.URL.Query()["url"]
+		if len(urls) == 0 {
 			http.Error(w, "no url", http.StatusBadRequest)
 			return
 		}
 
-		rootURL, err := url.Parse(urlParams[0])
-		if err != nil {
-			http.Error(w, "url parse failed", http.StatusBadRequest)
-			return
+		var startingURLs []url.URL
+		for _, v := range urls {
+			parsedURL, err := url.Parse(v)
+			if err != nil {
+				http.Error(w, "url parse failed", http.StatusBadRequest)
+				return
+			}
+			startingURLs = append(startingURLs, *parsedURL)
 		}
 
-		completed, incomplete := Scan(*rootURL, []url.URL{*rootURL}, concurrency, timeout)
+		completed, incomplete := Scan(startingURLs[0], startingURLs, concurrency, timeout)
 
 		sort.Sort(ByURL(completed))
 
