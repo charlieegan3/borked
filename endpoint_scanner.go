@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
@@ -16,23 +17,38 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 		w.Header().Set("Access-Control-Allow-Headers",
 			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 
-		urls := r.URL.Query()["url"]
-		if len(urls) == 0 {
-			http.Error(w, "no url", http.StatusBadRequest)
+		rootURLString := r.URL.Query()["root"]
+		if rootURLString == nil {
+			http.Error(w, "no root url", http.StatusBadRequest)
 			return
 		}
 
-		var startingURLs []url.URL
-		for _, v := range urls {
-			parsedURL, err := url.Parse(v)
-			if err != nil {
-				http.Error(w, "url parse failed", http.StatusBadRequest)
-				return
-			}
-			startingURLs = append(startingURLs, *parsedURL)
+		rootURL, err := url.Parse(rootURLString[0])
+		if err != nil {
+			http.Error(w, "invalid root url", http.StatusBadRequest)
+			return
 		}
 
-		completed, incomplete := Scan(startingURLs[0], startingURLs, concurrency, timeout)
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, "failed to read body", http.StatusBadRequest)
+		}
+
+		var rawUrls []string
+		err = json.Unmarshal(body, &rawUrls)
+		if err != nil {
+			http.Error(w, "failed to parse URL list", http.StatusBadRequest)
+		}
+
+		var urls []url.URL
+		for _, v := range rawUrls {
+			parsedURL, err := url.Parse(v)
+			if err == nil {
+				urls = append(urls, *parsedURL)
+			}
+		}
+
+		completed, incomplete := Scan(*rootURL, urls, concurrency, timeout)
 
 		sort.Sort(ByURL(completed))
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +36,8 @@ func TestScanEndpoint(t *testing.T) {
 		}
 	}))
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("/?url=%s", localServer.URL), nil)
+	lsURL := localServer.URL
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf("[\"%v\"]", lsURL))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -50,7 +52,6 @@ func TestScanEndpoint(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	lsURL := localServer.URL
 	expected := fmt.Sprintf(`{"completed":[{"url":"%v","status_code":200,"message":""},{"url":"%v/404","status_code":404,"message":""},{"url":"%v/page2","status_code":200,"message":""},{"url":"%v/page3","status_code":200,"message":""},{"url":"http://nowhere.com","status_code":0,"message":"Get http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}],"incomplete":[]}`, lsURL, lsURL, lsURL, lsURL)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
@@ -78,7 +79,8 @@ func TestScanEndpointIncomplete(t *testing.T) {
 		}
 	}))
 
-	req, err := http.NewRequest("GET", fmt.Sprintf("/?url=%s", localServer.URL), nil)
+	lsURL := localServer.URL
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf("[\"%v\"]", localServer.URL))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +95,6 @@ func TestScanEndpointIncomplete(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	lsURL := localServer.URL
 	expected := fmt.Sprintf(
 		`{"completed":[{"url":"%v","status_code":200,"message":""}],"incomplete":["%v/page2"]}`, lsURL, lsURL)
 	if rr.Body.String() != expected {
@@ -130,7 +131,7 @@ func TestScanEndpointMultipleStartingUrls(t *testing.T) {
 	}))
 
 	lsURL := localServer.URL
-	req, err := http.NewRequest("GET", fmt.Sprintf("/?url=%s&url=%s/page3", lsURL, lsURL), nil)
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf("[\"%v\", \"%v/page3\"]", lsURL, lsURL))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +150,7 @@ func TestScanEndpointMultipleStartingUrls(t *testing.T) {
 }
 
 func TestScanEndpointNoUrl(t *testing.T) {
-	req, err := http.NewRequest("GET", "/?no_url_param", nil)
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?no_params"), bytes.NewBuffer([]byte("")))
 	if err != nil {
 		t.Fatal(err)
 	}
