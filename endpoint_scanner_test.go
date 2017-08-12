@@ -95,7 +95,7 @@ func TestScanEndpointIncomplete(t *testing.T) {
 
 	lsURL := localServer.URL
 	expected := fmt.Sprintf(
-		`{"completed":[{"url":"%v","status_code":200,"message":""}],"incomplete":[{"url":"%v/page2"}]}`, lsURL, lsURL)
+		`{"completed":[{"url":"%v","status_code":200,"message":""}],"incomplete":["%v/page2"]}`, lsURL, lsURL)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)
@@ -141,7 +141,7 @@ func TestScanEndpointMultipleStartingUrls(t *testing.T) {
 	handler.ServeHTTP(rr, req)
 
 	expected := fmt.Sprintf(
-		`{"completed":[{"url":"%v","status_code":200,"message":""},{"url":"%v/page3","status_code":200,"message":""}],"incomplete":[{"url":"%v/page2"}]}`, lsURL, lsURL, lsURL)
+		`{"completed":[{"url":"%v","status_code":200,"message":""},{"url":"%v/page3","status_code":200,"message":""}],"incomplete":["%v/page2"]}`, lsURL, lsURL, lsURL)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)

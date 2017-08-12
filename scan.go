@@ -44,11 +44,7 @@ type UnstartedURL struct {
 
 //MarshalJSON converts a URLResult into a json string
 func (u *UnstartedURL) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		URL string `json:"url"`
-	}{
-		URL: u.URL.String(),
-	})
+	return json.Marshal(u.URL.String())
 }
 
 type unstartedURLs struct {
