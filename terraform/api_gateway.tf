@@ -1,4 +1,4 @@
-output "endpoint" {
+output "api_endpoint" {
   value = "${aws_api_gateway_deployment.default.invoke_url}/${var.api_gateway_path_part}"
 }
 
@@ -16,11 +16,15 @@ resource "aws_api_gateway_rest_api" "default" {
 }
 
 resource "aws_api_gateway_deployment" "default" {
-  depends_on        = ["aws_api_gateway_integration.default"]
-  rest_api_id       = "${aws_api_gateway_rest_api.default.id}"
-  stage_name        = "${var.api_gateway_stage}"
-  stage_description = "Deployed at ${timestamp()}"
-  description       = "Deployed at ${timestamp()}"
+  depends_on  = ["aws_api_gateway_integration.default"]
+  rest_api_id = "${aws_api_gateway_rest_api.default.id}"
+  stage_name  = "${var.api_gateway_stage}"
+
+  stage_description = "V1"
+  description       = "V1"
+
+  //stage_description = "Deployed at ${timestamp()}"
+  //description       = "Deployed at ${timestamp()}"
 }
 
 resource "aws_api_gateway_method_settings" "default" {
@@ -105,7 +109,7 @@ resource "aws_api_gateway_integration_response" "resource_options" {
   response_parameters = {
     "method.response.header.Access-Control-Allow-Headers" = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "method.response.header.Access-Control-Allow-Methods" = "'POST,OPTIONS,GET,PUT,PATCH,DELETE'"
-    "method.response.header.Access-Control-Allow-Origin"  = "'*'"
+    "method.response.header.Access-Control-Allow-Origin"  = "'https://${var.domain}'"
   }
 
   depends_on = ["aws_api_gateway_integration.resource_options"]

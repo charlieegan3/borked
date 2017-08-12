@@ -2,6 +2,15 @@ variable project {
   default = "borked"
 }
 
+variable domain {
+  default = "borked.charlieegan3.com"
+}
+
+data "aws_acm_certificate" "default" {
+  domain   = "charlieegan3.com"
+  statuses = ["ISSUED"]
+}
+
 data "aws_caller_identity" "current" {}
 
 variable "region" {
