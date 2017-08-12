@@ -52,23 +52,26 @@
         }
       }
 
-      function fetch(rootURL, urls) {
-        //var data = '{"completed":[{"url":"http://be66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666ttermotherfuckingwebsite.com/","status_code":400,"message":"things"},{"url":"http://motherfuckingwebsite.com/","status_code":200,"message":""},{"url":"http://txti.es","status_code":200,"message":""},{"url":"https://twitter.com/drew_mc","status_code":439,"message":""},{"url":"https://twitter.com/gabehammersmith","status_code":200,"message":""}],"incomplete":[]}'
-        //render(JSON.parse(data))
-        //return
+      function fetch(rootURL, incomplete, visited) {
+        ajax().post(endpoint + "?root=" + rootURL, JSON.stringify({visited: visited, incomplete: incomplete})).then(function(data, xhr) {
+          render(data);
+          document.getElementById("resultsTable").style.cssText = "";
 
-        ajax().post(endpoint + "?root=" + rootURL, JSON.stringify(urls)).then(function(data, xhr) {
-            render(data);
+          if (data.incomplete.length > 0) {
+              var completed = []
+              for (var i = 0; i < data.completed.length; i++) {
+                completed.push(data.completed[i].url)
+              }
 
-            if (data.incomplete.length > 0) {
-              fetch(rootURL, data.incomplete);
+              fetch(rootURL, data.incomplete, completed);
             } else {
               document.getElementById("loader").style.cssText = "display: none;"
-              document.getElementById("resultsTable").style.cssText = "";
               document.getElementById("go").disabled = false;
             }
           }).catch(function(response, xhr) {
-            return console.log(response)
+            console.log(response)
+            alert("Something went wrong")
+            window.location.reload()
           })
       }
 
@@ -79,7 +82,7 @@
         document.getElementById("table-body").innerHTML = "";
 
         var url = document.getElementById("url").value;
-        fetch(url, [url]);
+        fetch(url, [url], []);
       }
 
       function init() {
