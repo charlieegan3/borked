@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html >
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tachyons/4.7.4/tachyons.css" />
+    <link href="https://fonts.googleapis.com/css?family=Luckiest+Guy" rel="stylesheet">
+    <style>
+      .luckiest-guy {
+        font-family: 'Luckiest Guy', cursive;
+      }
+      tr:nth-child(even) {
+        background-color: #eee;
+      }
+
+      .loader,.loader:after{border-radius:50%;width:5em;height:5em}.loader{margin:10px auto;font-size:10px;position:relative;text-indent:-9999em;border-top:1.1em solid #5e2ca5;border-right:1.1em solid #5e2ca5;border-bottom:1.1em solid rgba(0,0,0,0);border-left:1.1em solid #5e2ca5;-webkit-transform:translateZ(0);-ms-transform:translateZ(0);transform:translateZ(0);-webkit-animation:load8 1s infinite linear;animation:load8 1s infinite linear}@-webkit-keyframes load8{0%{-webkit-transform:rotate(0);transform:rotate(0)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes load8{0%{-webkit-transform:rotate(0);transform:rotate(0)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}
+    </style>
+
+    <script src="https://cdn.rawgit.com/fdaciuk/ajax/v2.3.0/dist/ajax.min.js"></script>
+    <script type="text/javascript">
+      var endpoint = "https://m82jomntt8.execute-api.us-east-1.amazonaws.com/production/process"
+
+      function render(data) {
+        var tableBody = document.getElementById("table-body")
+
+        for (var i = 0; i < data.completed.length; i++) {
+          var result = data.completed[i];
+
+          var statusColor = "light-purple";
+          var insertPostition = tableBody.children.length;
+          var linkText = result.url.replace(/https?:\/\//, "");
+          if (result.status_code != 200) {
+            statusColor = "red"
+            insertPostition = 0
+          }
+          if (linkText.length > 80) {
+            linkText = linkText.substring(0, 80) + "..."
+          }
+
+          var row = tableBody.insertRow(insertPostition);
+
+          var td = row.insertCell(0);
+          td.innerHTML = "<code class=\"f6 dark-gray\">" + result.status_code + "</code>"
+
+          var td = row.insertCell(1);
+          if (result.message == "") {
+            td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a>"
+          } else {
+            td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a><br><code class=\"f7\">" + result.message + "</code>"
+          }
+        }
+      }
+
+      function fetch(rootURL, urls) {
+        //var data = '{"completed":[{"url":"http://be66666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666666ttermotherfuckingwebsite.com/","status_code":400,"message":"things"},{"url":"http://motherfuckingwebsite.com/","status_code":200,"message":""},{"url":"http://txti.es","status_code":200,"message":""},{"url":"https://twitter.com/drew_mc","status_code":439,"message":""},{"url":"https://twitter.com/gabehammersmith","status_code":200,"message":""}],"incomplete":[]}'
+        //render(JSON.parse(data))
+        //return
+
+        ajax().post(endpoint + "?root=" + rootURL, JSON.stringify(urls)).then(function(data, xhr) {
+            render(data);
+
+            if (data.incomplete.length > 0) {
+              fetch(rootURL, data.incomplete);
+            } else {
+              document.getElementById("loader").style.cssText = "display: none;"
+              document.getElementById("resultsTable").style.cssText = "";
+              document.getElementById("go").disabled = false;
+            }
+          }).catch(function(response, xhr) {
+            return console.log(response)
+          })
+      }
+
+      function startSearch() {
+        document.getElementById("go").disabled = true;
+        document.getElementById("loader").style.cssText = "display: block;";
+        document.getElementById("resultsTable").style.cssText = "display: none;";
+        document.getElementById("table-body").innerHTML = "";
+
+        var url = document.getElementById("url").value;
+        fetch(url, [url]);
+      }
+
+      function init() {
+        var button = document.getElementById("go")
+        if (button == null) {
+          setTimeout(init, 1)
+          return
+        }
+        button.addEventListener("click", startSearch)
+      }
+      init()
+    </script>
+  </head>
+  <body class="bg-near-white system-sans-serif">
+    <h1 class="f1 tc luckiest-guy">
+      <a class="grow purple no-underline hover-light-purple" href="/">borked</a>
+    </h1>
+
+    <div class="mw6-ns w-100 center mb5">
+      <input id="url" type="text" class="mb1 db w-100 pa2 ba b--gray input-reset" placeholder="https://charlieegan3.com" value="http://bettermotherfuckingwebsite.com/"/>
+      <button id="go" class="db w-100 pv2 ba bw2 b--purple bg-white hover-bg-purple hover-white b pointer bg-animate input-reset">Go</button>
+    </div>
+
+    <div id="loader" class="loader" style="display: none;"></div>
+
+    <table id="resultsTable" class="center" style="display: none;">
+      <thead>
+        <tr>
+          <th class="tl pr2">Status</th>
+          <th class="tl">Link</th>
+        </tr>
+      </thead>
+      <tbody id="table-body"></tbody>
+    </table>
+  </body>
+</html>
