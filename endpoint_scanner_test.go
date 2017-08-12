@@ -37,7 +37,7 @@ func TestScanEndpoint(t *testing.T) {
 	}))
 
 	lsURL := localServer.URL
-	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf("[\"%v\"]", lsURL))))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": [], "incomplete": ["%v"]}`, lsURL))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestScanEndpointIncomplete(t *testing.T) {
 	}))
 
 	lsURL := localServer.URL
-	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf("[\"%v\"]", localServer.URL))))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": [], "incomplete": ["%v"]}`, localServer.URL))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -131,7 +131,7 @@ func TestScanEndpointMultipleStartingUrls(t *testing.T) {
 	}))
 
 	lsURL := localServer.URL
-	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf("[\"%v\", \"%v/page3\"]", lsURL, lsURL))))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": [], "incomplete":["%v", "%v/page3"]}`, lsURL, lsURL))))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -143,6 +143,39 @@ func TestScanEndpointMultipleStartingUrls(t *testing.T) {
 
 	expected := fmt.Sprintf(
 		`{"completed":[{"url":"%v","status_code":200,"message":""},{"url":"%v/page3","status_code":200,"message":""}],"incomplete":["%v/page2"]}`, lsURL, lsURL, lsURL)
+	if rr.Body.String() != expected {
+		t.Errorf("handler returned unexpected body: got %v want %v",
+			rr.Body.String(), expected)
+	}
+}
+
+func TestScanEndpointWithWorkInProgress(t *testing.T) {
+	localServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/page1" {
+			pageContent := `
+            <html>
+            <a href="/page2">Page 2</a>
+            <html>`
+
+			fmt.Fprintln(w, pageContent)
+		} else if r.URL.Path == "/page2" {
+			pageContent := "<html>Never visited<html>"
+			fmt.Fprintln(w, pageContent)
+		}
+	}))
+
+	lsURL := localServer.URL
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s/page1", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": ["%v/page2"], "incomplete": ["%v/page1"]}`, lsURL, lsURL))))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(BuildHandler(2, 5*time.Millisecond))
+
+	handler.ServeHTTP(rr, req)
+
+	expected := fmt.Sprintf(`{"completed":[{"url":"%v/page1","status_code":200,"message":""}],"incomplete":[]}`, lsURL)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: got %v want %v",
 			rr.Body.String(), expected)

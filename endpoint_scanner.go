@@ -34,21 +34,32 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 			http.Error(w, "failed to read body", http.StatusBadRequest)
 		}
 
-		var rawUrls []string
-		err = json.Unmarshal(body, &rawUrls)
+		var task struct {
+			VisitedURLs    []string `json:"visited"`
+			IncompleteURLs []string `json:"incomplete"`
+		}
+		err = json.Unmarshal(body, &task)
 		if err != nil {
 			http.Error(w, "failed to parse URL list", http.StatusBadRequest)
 		}
 
-		var urls []url.URL
-		for _, v := range rawUrls {
+		var incompleteURLs []url.URL
+		for _, v := range task.IncompleteURLs {
 			parsedURL, err := url.Parse(v)
 			if err == nil {
-				urls = append(urls, *parsedURL)
+				incompleteURLs = append(incompleteURLs, *parsedURL)
 			}
 		}
 
-		completed, incomplete := Scan(*rootURL, urls, concurrency, timeout)
+		var visitedURLs []url.URL
+		for _, v := range task.VisitedURLs {
+			parsedURL, err := url.Parse(v)
+			if err == nil {
+				visitedURLs = append(visitedURLs, *parsedURL)
+			}
+		}
+
+		completed, incomplete := Scan(*rootURL, incompleteURLs, visitedURLs, concurrency, timeout)
 
 		sort.Sort(ByURL(completed))
 

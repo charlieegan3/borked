@@ -107,6 +107,20 @@ func (v *completedURLs) contains(item url.URL) bool {
 	return found
 }
 
+type visitedURLs struct {
+	Elements []url.URL
+}
+
+func (v *visitedURLs) contains(item url.URL) bool {
+	found := false
+	for _, e := range v.Elements {
+		if e == item {
+			return true
+		}
+	}
+	return found
+}
+
 type idleCounter struct {
 	Count int
 	Total int
@@ -134,7 +148,7 @@ func (c *idleCounter) All() bool {
 }
 
 // Scan for broken links starting from a given page
-func Scan(root url.URL, urls []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []UnstartedURL) {
+func Scan(root url.URL, urls []url.URL, visited []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []UnstartedURL) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -146,21 +160,23 @@ func Scan(root url.URL, urls []url.URL, concurrency int, timeout time.Duration) 
 	var completed completedURLs
 	idle := idleCounter{Total: concurrency}
 
+	ignored := visitedURLs{Elements: visited}
+
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
-		go work(ctx, &wg, &idle, root.Host, &unstarted, &completed)
+		go work(ctx, &wg, &idle, root.Host, &unstarted, &completed, &ignored)
 	}
 	wg.Wait()
 
 	return completed.Elements, unstarted.Elements
 }
 
-func work(ctx context.Context, wg *sync.WaitGroup, idle *idleCounter, host string, unstarted *unstartedURLs, completed *completedURLs) error {
+func work(ctx context.Context, wg *sync.WaitGroup, idle *idleCounter, host string, unstarted *unstartedURLs, completed *completedURLs, ignored *visitedURLs) error {
 	defer wg.Done()
 
 	for {
 		unstartedURL, err := unstarted.pop()
-		if !completed.contains(unstartedURL.URL) {
+		if !completed.contains(unstartedURL.URL) && !ignored.contains(unstartedURL.URL) {
 			if err == nil {
 				idle.Dec()
 				result := make(chan URLResult)
