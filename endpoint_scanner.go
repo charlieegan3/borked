@@ -11,6 +11,11 @@ import (
 //BuildHandler configures borked handlers with timeouts and concurrency settings
 func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		w.Header().Set("Access-Control-Allow-Headers",
+			"Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+
 		urls := r.URL.Query()["url"]
 		if len(urls) == 0 {
 			http.Error(w, "no url", http.StatusBadRequest)
