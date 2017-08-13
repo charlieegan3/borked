@@ -31,7 +31,8 @@ func ExtractLinks(html string, currentURL url.URL) []url.URL {
 			continue
 		}
 
-		if url.Scheme == "mailto" || url.Scheme == "wss" || url.Scheme == "spotify" {
+		re := regexp.MustCompile(`^\w+:`)
+		if url.Scheme != "http" && url.Scheme != "https" && re.MatchString(url.String()) {
 			continue
 		}
 

@@ -39,7 +39,20 @@ func TestSrcLinkParsing(t *testing.T) {
 
 func TestIgnoresMailtoLink(t *testing.T) {
 	html := `
-        <html>... <a mailto="name@example.com"> ...</html>
+        <html>... <a mailto="name@example.com"> <a href="mailto:name@example.com"> ...</html>
+    `
+	currentURL, _ := url.Parse("http://example.com")
+
+	links := ExtractLinks(html, *currentURL)
+
+	if len(links) > 0 {
+		t.Error("Expected 0 links, got", len(links))
+	}
+}
+
+func TestIgnoresSomeRandomProtocol(t *testing.T) {
+	html := `
+        <html>... <a href="somethingelse:things"> ...</html>
     `
 	currentURL, _ := url.Parse("http://example.com")
 
