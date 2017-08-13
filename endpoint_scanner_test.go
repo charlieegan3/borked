@@ -37,7 +37,7 @@ func TestScanEndpoint(t *testing.T) {
 	}))
 
 	lsURL := localServer.URL
-	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": [], "incomplete": ["%v"]}`, lsURL))))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(`{ "visited": [], "incomplete": []}`)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestScanEndpointIncomplete(t *testing.T) {
 	}))
 
 	lsURL := localServer.URL
-	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": [], "incomplete": ["%v"]}`, localServer.URL))))
+	req, err := http.NewRequest("POST", fmt.Sprintf("/?root=%s", lsURL), bytes.NewBuffer([]byte(fmt.Sprintf(`{ "visited": [], "incomplete": []}`))))
 	if err != nil {
 		t.Fatal(err)
 	}

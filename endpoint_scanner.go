@@ -28,6 +28,13 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 			http.Error(w, "invalid root url", http.StatusBadRequest)
 			return
 		}
+		if rootURL.Scheme == "" {
+			rootURL, err = url.Parse("http://" + rootURL.String())
+			if err != nil {
+				http.Error(w, "invalid root url", http.StatusBadRequest)
+				return
+			}
+		}
 
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
@@ -49,6 +56,9 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 			if err == nil {
 				incompleteURLs = append(incompleteURLs, *parsedURL)
 			}
+		}
+		if len(incompleteURLs) == 0 {
+			incompleteURLs = append(incompleteURLs, *rootURL)
 		}
 
 		var visitedURLs []url.URL
