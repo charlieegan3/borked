@@ -17,8 +17,13 @@
       .loader,.loader:after{border-radius:50%;width:5em;height:5em}.loader{margin:10px auto;font-size:10px;position:relative;text-indent:-9999em;border-top:1.1em solid #5e2ca5;border-right:1.1em solid #5e2ca5;border-bottom:1.1em solid rgba(0,0,0,0);border-left:1.1em solid #5e2ca5;-webkit-transform:translateZ(0);-ms-transform:translateZ(0);transform:translateZ(0);-webkit-animation:load8 1s infinite linear;animation:load8 1s infinite linear}@-webkit-keyframes load8{0%{-webkit-transform:rotate(0);transform:rotate(0)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes load8{0%{-webkit-transform:rotate(0);transform:rotate(0)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}
     </style>
 
+    <script src="https://cdn.ravenjs.com/3.17.0/raven.min.js" crossorigin="anonymous"></script>
+
     <script src="https://cdn.rawgit.com/fdaciuk/ajax/v2.3.0/dist/ajax.min.js"></script>
+
     <script type="text/javascript">
+      Raven.config('https://017314d05e774e479acbf7b672296b9f@sentry.io/202949').install()
+
       var endpoint = "https://m82jomntt8.execute-api.us-east-1.amazonaws.com/production/process"
 
       function render(data) {
