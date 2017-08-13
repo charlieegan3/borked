@@ -85,6 +85,12 @@
         fetch(url, [], []);
       }
 
+      function maybeStartSearch(e) {
+        if (e.which == 13 || e.keyCode == 13) {
+          startSearch()
+        }
+      }
+
       function clearInput() {
         var input = document.getElementById("url")
           if (input.value == "http://bettermotherfuckingwebsite.com") {
@@ -101,6 +107,7 @@
         }
         button.addEventListener("click", startSearch)
         input.addEventListener("click", clearInput)
+        input.addEventListener("keydown", maybeStartSearch)
       }
       init()
     </script>
