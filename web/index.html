@@ -19,102 +19,120 @@
 
     <script src="https://cdn.ravenjs.com/3.17.0/raven.min.js" crossorigin="anonymous"></script>
 
-    <script src="https://cdn.rawgit.com/fdaciuk/ajax/v2.3.0/dist/ajax.min.js"></script>
-
     <script type="text/javascript">
-      Raven.config('https://017314d05e774e479acbf7b672296b9f@sentry.io/202949').install()
+      Raven.config('https://017314d05e774e479acbf7b672296b9f@sentry.io/202949').install();
 
-      var endpoint = "https://m82jomntt8.execute-api.us-east-1.amazonaws.com/production/process"
+      const endpoint = "https://m82jomntt8.execute-api.us-east-1.amazonaws.com/production/process"
+      //const endpoint = "http://localhost:3000"
 
-      function render(data) {
-        var tableBody = document.getElementById("table-body")
+      var borked = {
+        render: function(data) {
+          var tableBody = document.getElementById("table-body")
 
-        for (var i = 0; i < data.completed.length; i++) {
-          var result = data.completed[i];
+          for (var i = 0; i < data.completed.length; i++) {
+            var result = data.completed[i];
 
-          var statusColor = "light-purple";
-          var insertPostition = tableBody.children.length;
-          var linkText = result.url.replace(/https?:\/\//, "");
-          if (result.status_code != 200) {
-            statusColor = "red"
-            insertPostition = 0
-          }
-          if (linkText.length > 80) {
-            linkText = linkText.substring(0, 80) + "..."
-          }
-
-          var row = tableBody.insertRow(insertPostition);
-
-          var td = row.insertCell(0);
-          td.innerHTML = "<code class=\"f6 dark-gray\">" + result.status_code + "</code>"
-
-          var td = row.insertCell(1);
-          if (result.message == "") {
-            td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a>"
-          } else {
-            td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a><br><code class=\"f7\">" + result.message + "</code>"
-          }
-        }
-      }
-
-      function fetch(rootURL, incomplete, visited) {
-        ajax().post(endpoint + "?root=" + rootURL, JSON.stringify({visited: visited, incomplete: incomplete})).then(function(data, xhr) {
-          render(data);
-          document.getElementById("resultsTable").style.cssText = "";
-
-          if (data.incomplete.length > 0) {
-              var completed = []
-              for (var i = 0; i < data.completed.length; i++) {
-                completed.push(data.completed[i].url)
-              }
-
-              fetch(rootURL, data.incomplete, completed);
-            } else {
-              document.getElementById("loader").style.cssText = "display: none;"
-              document.getElementById("go").disabled = false;
+            var statusColor = "light-purple";
+            var insertPostition = tableBody.children.length;
+            var linkText = result.url.replace(/https?:\/\//, "");
+            if (result.status_code != 200) {
+              statusColor = "red"
+              insertPostition = 0
             }
-          }).catch(function(response, xhr) {
-            console.log(response)
-            alert("Something went wrong")
-            window.location.reload()
-          })
-      }
+            if (linkText.length > 80) {
+              linkText = linkText.substring(0, 80) + "..."
+            }
 
-      function startSearch() {
-        document.getElementById("go").disabled = true;
-        document.getElementById("loader").style.cssText = "display: block;";
-        document.getElementById("resultsTable").style.cssText = "display: none;";
-        document.getElementById("table-body").innerHTML = "";
+            var row = tableBody.insertRow(insertPostition);
 
-        var url = document.getElementById("url").value;
-        fetch(url, [], []);
-      }
+            var td = row.insertCell(0);
+            td.innerHTML = "<code class=\"f6 dark-gray\">" + result.status_code + "</code>"
 
-      function maybeStartSearch(e) {
-        if (e.which == 13 || e.keyCode == 13) {
-          startSearch()
-        }
-      }
+            var td = row.insertCell(1);
+            if (result.message == "") {
+              td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a>"
+            } else {
+              td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a><br><code class=\"f7\">" + result.message + "</code>"
+            }
+          }
+        },
 
-      function clearInput() {
-        var input = document.getElementById("url")
+        fetch: function(rootURL, incomplete, visited) {
+          var request = new XMLHttpRequest();
+          request.open('POST', endpoint + "?root=" + rootURL, true);
+
+          request.onload = function() {
+            if (request.status == 200) {
+              var data = JSON.parse(request.responseText);
+              borked.render(data);
+              document.getElementById("resultsTable").style.cssText = "";
+
+              if (data.incomplete.length > 0) {
+                  var completed = []
+                  for (var i = 0; i < data.completed.length; i++) {
+                    completed.push(data.completed[i].url)
+                  }
+
+                  fetch(rootURL, data.incomplete, completed);
+                } else {
+                  document.getElementById("loader").style.cssText = "display: none;"
+                  document.getElementById("go").disabled = false;
+                }
+            } else {
+                      console.log(response)
+                      alert("Something went wrong")
+
+            }
+          };
+
+          request.onerror = function() {
+                      console.log(response)
+                      alert("Something went wrong")
+          };
+
+          request.send(JSON.stringify({visited: visited, incomplete: incomplete}));
+        },
+
+        startSearch: function() {
+          var url = document.getElementById("url").value;
+          if (url.length <= 5) {
+            return
+          }
+
+          document.getElementById("go").disabled = true;
+          document.getElementById("loader").style.cssText = "display: block;";
+          document.getElementById("resultsTable").style.cssText = "display: none;";
+          document.getElementById("table-body").innerHTML = "";
+          borked.fetch(url, [], []);
+        },
+
+        maybeStartSearch: function(e) {
+          if (e.which == 13 || e.keyCode == 13) {
+            borked.startSearch()
+          }
+        },
+
+        clearInput: function() {
+          var input = document.getElementById("url")
           if (input.value == "http://bettermotherfuckingwebsite.com") {
             input.value = ""
           }
-      }
+        },
 
-      function init() {
-        var button = document.getElementById("go")
-        var input = document.getElementById("url")
-        if (button == null || input == null) {
-          setTimeout(init, 1)
-          return
+        init: function() {
+          var button = document.getElementById("go")
+          var input = document.getElementById("url")
+          if (button == null || input == null) {
+            window.setTimeout(borked.init, 1)
+            return
+          }
+          button.addEventListener("click", borked.startSearch)
+          input.addEventListener("click", borked.clearInput)
+          input.addEventListener("keydown", borked.maybeStartSearch)
         }
-        button.addEventListener("click", startSearch)
-        input.addEventListener("click", clearInput)
-        input.addEventListener("keydown", maybeStartSearch)
-      }
-      init()
+      };
+
+      borked.init();
     </script>
   </head>
   <body class="bg-near-white system-sans-serif">
