@@ -39,6 +39,7 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 		body, err := ioutil.ReadAll(r.Body)
 		if err != nil {
 			http.Error(w, "failed to read body", http.StatusBadRequest)
+			return
 		}
 
 		var task struct {
@@ -48,6 +49,7 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 		err = json.Unmarshal(body, &task)
 		if err != nil {
 			http.Error(w, "failed to parse URL list", http.StatusBadRequest)
+			return
 		}
 
 		var incompleteURLs []url.URL
