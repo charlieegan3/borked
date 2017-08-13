@@ -12,6 +12,7 @@ import (
 // URLResult represents a checked page and the result of making that check
 type URLResult struct {
 	URL        url.URL
+	Source     url.URL
 	StatusCode int
 	Message    string
 }
@@ -20,10 +21,12 @@ type URLResult struct {
 func (u *URLResult) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		URL        string `json:"url"`
+		Source     string `json:"source"`
 		StatusCode int    `json:"status_code"`
 		Message    string `json:"message"`
 	}{
 		URL:        u.URL.String(),
+		Source:     u.Source.String(),
 		StatusCode: u.StatusCode,
 		Message:    u.Message,
 	})
@@ -39,12 +42,19 @@ func (a ByURL) Less(i, j int) bool { return a[i].URL.String() < a[j].URL.String(
 
 //UnstartedURL is a URL yet to be scanned
 type UnstartedURL struct {
-	URL url.URL
+	URL    url.URL
+	Source url.URL
 }
 
 //MarshalJSON converts a URLResult into a json string
 func (u *UnstartedURL) MarshalJSON() ([]byte, error) {
-	return json.Marshal(u.URL.String())
+	return json.Marshal(&struct {
+		URL    string `json:"url"`
+		Source string `json:"source"`
+	}{
+		URL:    u.URL.String(),
+		Source: u.Source.String(),
+	})
 }
 
 type unstartedURLs struct {
@@ -148,14 +158,19 @@ func (c *idleCounter) All() bool {
 }
 
 // Scan for broken links starting from a given page
-func Scan(root url.URL, urls []url.URL, visited []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []UnstartedURL) {
+func Scan(root url.URL, urls []JSONUnstartedURL, visited []url.URL, concurrency int, timeout time.Duration) ([]URLResult, []UnstartedURL) {
 	var wg sync.WaitGroup
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	var unstarted unstartedURLs
 	for _, v := range urls {
-		unstarted.append(UnstartedURL{URL: v})
+		parsedURL, err := url.Parse(v.URL)
+		parsedSource, err := url.Parse(v.Source)
+		if err != nil {
+			continue
+		}
+		unstarted.append(UnstartedURL{*parsedURL, *parsedSource})
 	}
 	var completed completedURLs
 	idle := idleCounter{Total: concurrency}
@@ -180,7 +195,7 @@ func work(ctx context.Context, wg *sync.WaitGroup, idle *idleCounter, host strin
 			if err == nil {
 				idle.Dec()
 				result := make(chan URLResult)
-				go LoadPage(unstartedURL.URL, host, result, unstarted)
+				go LoadPage(unstartedURL, host, result, unstarted)
 				select {
 				case urlResult := <-result:
 					completed.append(urlResult)

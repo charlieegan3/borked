@@ -3,17 +3,16 @@ package main
 import (
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"strings"
 )
 
 // LoadPage requests the document at the provided URL
 // returns status code (and body if HTML)
-func LoadPage(url url.URL, host string, result chan URLResult, unstarted *unstartedURLs) {
-	req, err := http.NewRequest("GET", url.String(), nil)
+func LoadPage(link UnstartedURL, host string, result chan URLResult, unstarted *unstartedURLs) {
+	req, err := http.NewRequest("GET", link.URL.String(), nil)
 
 	if err != nil {
-		result <- URLResult{url, 0, err.Error()}
+		result <- URLResult{link.URL, link.Source, 0, err.Error()}
 		return
 	}
 
@@ -23,7 +22,7 @@ func LoadPage(url url.URL, host string, result chan URLResult, unstarted *unstar
 	resp, err := client.Do(req)
 
 	if err != nil {
-		result <- URLResult{url, 0, err.Error()}
+		result <- URLResult{link.URL, link.Source, 0, err.Error()}
 		return
 	}
 
@@ -32,10 +31,10 @@ func LoadPage(url url.URL, host string, result chan URLResult, unstarted *unstar
 	defer resp.Body.Close()
 
 	var body string
-	if url.Host == host && strings.Contains(contentType, "html") {
+	if link.URL.Host == host && strings.Contains(contentType, "html") {
 		rawBody, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			result <- URLResult{url, 0, err.Error()}
+			result <- URLResult{link.URL, link.Source, 0, err.Error()}
 			return
 		}
 		body = string(rawBody)
@@ -43,9 +42,9 @@ func LoadPage(url url.URL, host string, result chan URLResult, unstarted *unstar
 		body = ""
 	}
 
-	for _, v := range ExtractLinks(body, url) {
-		unstarted.append(UnstartedURL{URL: v})
+	for _, v := range ExtractLinks(body, link.URL) {
+		unstarted.append(UnstartedURL{URL: v, Source: link.URL})
 	}
 
-	result <- URLResult{url, resp.StatusCode, ""}
+	result <- URLResult{link.URL, link.Source, resp.StatusCode, ""}
 }

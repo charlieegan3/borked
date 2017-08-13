@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+// JSONUnstartedURL struct to parse incomplete URLs listed in the request
+type JSONUnstartedURL struct {
+	URL    string
+	Source string
+}
+
 //BuildHandler configures borked handlers with timeouts and concurrency settings
 func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -43,8 +49,8 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 		}
 
 		var task struct {
-			VisitedURLs    []string `json:"visited"`
-			IncompleteURLs []string `json:"incomplete"`
+			VisitedURLs    []string           `json:"visited"`
+			IncompleteURLs []JSONUnstartedURL `json:"incomplete"`
 		}
 		err = json.Unmarshal(body, &task)
 		if err != nil {
@@ -52,15 +58,8 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 			return
 		}
 
-		var incompleteURLs []url.URL
-		for _, v := range task.IncompleteURLs {
-			parsedURL, err := url.Parse(v)
-			if err == nil {
-				incompleteURLs = append(incompleteURLs, *parsedURL)
-			}
-		}
-		if len(incompleteURLs) == 0 {
-			incompleteURLs = append(incompleteURLs, *rootURL)
+		if len(task.IncompleteURLs) == 0 {
+			task.IncompleteURLs = append(task.IncompleteURLs, JSONUnstartedURL{rootURL.String(), rootURL.String()})
 		}
 
 		var visitedURLs []url.URL
@@ -71,7 +70,7 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 			}
 		}
 
-		completed, incomplete := Scan(*rootURL, incompleteURLs, visitedURLs, concurrency, timeout)
+		completed, incomplete := Scan(*rootURL, task.IncompleteURLs, visitedURLs, concurrency, timeout)
 
 		sort.Sort(ByURL(completed))
 

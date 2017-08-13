@@ -39,7 +39,7 @@ func TestCrawling(t *testing.T) {
 
 	startPage, _ := url.Parse(localServer.URL + "/")
 
-	completed, _ := Scan(*startPage, []url.URL{*startPage}, []url.URL{}, 1, time.Second)
+	completed, _ := Scan(*startPage, []JSONUnstartedURL{JSONUnstartedURL{startPage.String(), ""}}, []url.URL{}, 1, time.Second)
 	sort.Sort(ByURL(completed))
 
 	if len(completed) != 5 {
@@ -108,7 +108,7 @@ func TestCrawlingTimeout(t *testing.T) {
 
 	startPage, _ := url.Parse(localServer.URL + "/")
 
-	completed, incomplete := Scan(*startPage, []url.URL{*startPage}, []url.URL{}, 1, 3*time.Millisecond)
+	completed, incomplete := Scan(*startPage, []JSONUnstartedURL{JSONUnstartedURL{startPage.String(), ""}}, []url.URL{}, 1, 3*time.Millisecond)
 
 	if len(completed) != 1 {
 		t.Error("Expected 1 completed link, got", len(completed))
@@ -140,7 +140,7 @@ func TestCrawlingCyclic(t *testing.T) {
 
 	startPage, _ := url.Parse(localServer.URL + "/")
 
-	completed, _ := Scan(*startPage, []url.URL{*startPage}, []url.URL{}, 1, time.Second)
+	completed, _ := Scan(*startPage, []JSONUnstartedURL{JSONUnstartedURL{startPage.String(), ""}}, []url.URL{}, 1, time.Second)
 	sort.Sort(ByURL(completed))
 
 	if len(completed) != 2 {

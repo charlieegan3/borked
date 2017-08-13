@@ -49,10 +49,10 @@
             td.innerHTML = "<code class=\"f6 dark-gray\">" + result.status_code + "</code>"
 
             var td = row.insertCell(1);
-            if (result.message == "") {
-              td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a>"
-            } else {
-              td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a><br><code class=\"f7\">" + result.message + "</code>"
+
+            td.innerHTML = "<a class=\"" + statusColor + " no-underline\" href=\"" + result.url + "\">" + linkText + "</a><br><a class=\"no-underline f7 gray\" href=\"" + result.source + "\">Source page: " + result.source + "</a>"
+            if (result.message != "") {
+              td.innerHTML += "<br><code class=\"f7\">" + result.message + "</code>"
             }
           }
         },
@@ -73,21 +73,22 @@
                     completed.push(data.completed[i].url)
                   }
 
-                  fetch(rootURL, data.incomplete, completed);
+                  borked.fetch(rootURL, data.incomplete, completed);
                 } else {
                   document.getElementById("loader").style.cssText = "display: none;"
                   document.getElementById("go").disabled = false;
                 }
             } else {
-                      console.log(response)
-                      alert("Something went wrong")
-
+              console.log(request.responseText);
+              alert("Something went wrong")
+              window.location = window.location;
             }
           };
 
           request.onerror = function() {
-                      console.log(response)
-                      alert("Something went wrong")
+            console.log(request.responseText);
+            alert("Something went wrong")
+            window.location = window.location;
           };
 
           request.send(JSON.stringify({visited: visited, incomplete: incomplete}));
