@@ -84,5 +84,7 @@ func BuildHandler(concurrency int, timeout time.Duration) func(w http.ResponseWr
 
 		jsonResult, _ := json.Marshal(responseData)
 		w.Write(jsonResult)
+
+		LogJob(*rootURL, len(completed), r.RemoteAddr, r.Header.Get("User-Agent"))
 	}
 }
