@@ -20,11 +20,8 @@ resource "aws_api_gateway_deployment" "default" {
   rest_api_id = "${aws_api_gateway_rest_api.default.id}"
   stage_name  = "${var.api_gateway_stage}"
 
-  stage_description = "V1"
-  description       = "V1"
-
-  //stage_description = "Deployed at ${timestamp()}"
-  //description       = "Deployed at ${timestamp()}"
+  // https://github.com/hashicorp/terraform/issues/6613
+  stage_description = "${md5(file("api_gateway.tf"))}"
 }
 
 resource "aws_api_gateway_method_settings" "default" {
