@@ -59,7 +59,7 @@ resource "aws_iam_role_policy" "execution" {
         "dynamodb:*"
       ],
       "Effect": "Allow",
-      "Resource": "${aws_dynamodb_table.jobs.arn}"
+      "Resource": ["${aws_dynamodb_table.jobs.arn}", "${aws_dynamodb_table.counts.arn}"]
     }
   ]
 }
