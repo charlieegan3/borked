@@ -52,7 +52,7 @@ func TestScanEndpoint(t *testing.T) {
 			status, http.StatusOK)
 	}
 
-	expected := fmt.Sprintf(`{"completed":[{"url":"%v","source":"%v","status_code":200,"message":""},{"url":"%v/404","source":"%v/page2","status_code":404,"message":""},{"url":"%v/page2","source":"%v","status_code":200,"message":""},{"url":"%v/page3","source":"%v/page2","status_code":200,"message":""},{"url":"http://nowhere.com","source":"%v/page2","status_code":0,"message":"Get http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}],"incomplete":[]}`, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL)
+	expected := fmt.Sprintf(`{"completed":[{"url":"%v","source":"%v","status_code":200,"message":""},{"url":"%v/404","source":"%v/page2","status_code":404,"message":""},{"url":"%v/page2","source":"%v","status_code":200,"message":""},{"url":"%v/page3","source":"%v/page2","status_code":200,"message":""},{"url":"http://nowhere.com","source":"%v/page2","status_code":0,"message":"Head http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}],"incomplete":[]}`, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL, lsURL)
 	if rr.Body.String() != expected {
 		t.Errorf("handler returned unexpected body: \ngot\n%v\nwant\n%v",
 			rr.Body.String(), expected)

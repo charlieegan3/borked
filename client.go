@@ -9,7 +9,13 @@ import (
 // LoadPage requests the document at the provided URL
 // returns status code (and body if HTML)
 func LoadPage(link UnstartedURL, host string, result chan URLResult, unstarted *unstartedURLs) {
-	req, err := http.NewRequest("GET", link.URL.String(), nil)
+	var req *http.Request
+	var err error
+	if link.URL.Host == host {
+		req, err = http.NewRequest("GET", link.URL.String(), nil)
+	} else {
+		req, err = http.NewRequest("HEAD", link.URL.String(), nil)
+	}
 
 	if err != nil {
 		result <- URLResult{link.URL, link.Source, 0, err.Error()}
@@ -38,12 +44,9 @@ func LoadPage(link UnstartedURL, host string, result chan URLResult, unstarted *
 			return
 		}
 		body = string(rawBody)
-	} else {
-		body = ""
-	}
-
-	for _, v := range ExtractLinks(body, link.URL) {
-		unstarted.append(UnstartedURL{URL: v, Source: link.URL})
+		for _, v := range ExtractLinks(body, link.URL) {
+			unstarted.append(UnstartedURL{URL: v, Source: link.URL})
+		}
 	}
 
 	result <- URLResult{link.URL, link.Source, resp.StatusCode, ""}

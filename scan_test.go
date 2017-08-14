@@ -76,7 +76,7 @@ func TestCrawling(t *testing.T) {
 		}
 	}
 
-	expectedMessages := []string{"", "", "", "", "Get http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}
+	expectedMessages := []string{"", "", "", "", "Head http://nowhere.com: dial tcp: lookup nowhere.com: no such host"}
 	for i, v := range messages {
 		if v != expectedMessages[i] {
 			t.Error("Unexpected Message: ", v)
