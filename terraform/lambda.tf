@@ -38,8 +38,8 @@ resource "aws_iam_role" "lambda" {
 POLICY
 }
 
-resource "aws_iam_role_policy" "execution" {
-  name = "${var.project}-lambda-execution"
+resource "aws_iam_role_policy" "logging" {
+  name = "${var.project}-lambda-logging-policy"
   role = "${aws_iam_role.lambda.id}"
 
   policy = <<EOF
@@ -53,13 +53,6 @@ resource "aws_iam_role_policy" "execution" {
       ],
       "Effect": "Allow",
       "Resource": "*"
-    },
-    {
-      "Action": [
-        "dynamodb:*"
-      ],
-      "Effect": "Allow",
-      "Resource": "${aws_dynamodb_table.jobs.arn}"
     }
   ]
 }

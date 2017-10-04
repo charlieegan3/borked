@@ -135,7 +135,7 @@ func TestScanEndpointMultipleStartingUrls(t *testing.T) {
 	}
 
 	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(BuildHandler(2, 5*time.Millisecond))
+	handler := http.HandlerFunc(BuildHandler(2, 2*time.Millisecond))
 
 	handler.ServeHTTP(rr, req)
 
