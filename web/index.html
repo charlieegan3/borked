@@ -26,7 +26,6 @@
       Raven.config('https://017314d05e774e479acbf7b672296b9f@sentry.io/202949').install();
 
       const endpoint = "https://m82jomntt8.execute-api.us-east-1.amazonaws.com/production/process"
-      const countEndpoint = "https://33tzjofpy2.execute-api.us-east-1.amazonaws.com/production/count"
       //const endpoint = "http://localhost:3000"
 
       var borked = {
@@ -98,22 +97,6 @@
           request.send(JSON.stringify({visited: visited, incomplete: incomplete}));
         },
 
-        showCounts: function() {
-          var request = new XMLHttpRequest();
-          request.open('GET', countEndpoint, true);
-
-          request.onload = function() {
-            if (request.status == 200) {
-              var data = JSON.parse(request.responseText);
-              document.getElementById("counts").innerHTML = "Borked has served <b>" +data.requests+ "</b> requests and visited <b>" +data.completed+ "</b> links to date.";
-            } else {
-              throw request.responseText;
-            }
-          };
-
-          request.send();
-        },
-
         startSearch: function() {
           var url = document.getElementById("url").value;
           if (url.length <= 5) {
@@ -143,15 +126,13 @@
         init: function() {
           var button = document.getElementById("go")
           var input = document.getElementById("url")
-          var countArea = document.getElementById("counts")
-          if (button == null || input == null || countArea == null) {
+          if (button == null || input == null) {
             window.setTimeout(borked.init, 1)
             return
           }
           button.addEventListener("click", borked.startSearch)
           input.addEventListener("click", borked.clearInput)
           input.addEventListener("keydown", borked.maybeStartSearch)
-          borked.showCounts()
         }
       };
 
@@ -181,9 +162,6 @@
       </thead>
       <tbody id="table-body"></tbody>
     </table>
-
-    <p class="tc dark-gray f6" id="counts">
-    </p>
 
     <p class="tc gray f7">
       Made without love and minimal care by <a class="purple" href="https://charlieegan3.com">charlieegan3</a>.
