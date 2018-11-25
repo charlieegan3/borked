@@ -4,21 +4,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net"
-	"github.com/eawsy/aws-lambda-go-net/service/lambda/runtime/net/apigatewayproxy"
+	"github.com/gobuffalo/packr"
 )
 
-// Handle is the exported handler called by AWS Lambda.
-var Handle apigatewayproxy.Handler
+func main() {
+	box := packr.NewBox("./web")
 
-func init() {
-	ln := net.Listen()
-
-	// Amazon API Gateway binary media types are supported out of the box.
-	// If you don't send or receive binary data, you can safely set it to nil.
-	Handle = apigatewayproxy.New(ln, nil).Handle
-
-	// Any Go framework complying with the Go http.Handler interface can be used.
-	// This includes, but is not limited to, Vanilla Go, Gin, Echo, Gorrila, Goa, etc.
-	go http.Serve(ln, http.HandlerFunc(BuildHandler(10, 10*time.Second)))
+	http.Handle("/process", http.HandlerFunc(BuildHandler(10, 10*time.Second)))
+	http.Handle("/", http.FileServer(box))
+	http.ListenAndServe(":3000", nil)
 }
